@@ -596,6 +596,7 @@ Module
   readonly property int freezeMode:   2
   readonly property int loopMode:     3
   readonly property int remixMode:    4
+  readonly property int stemMode:     5
 
   MappingPropertyDescriptor { id: padsMode;   path: propertiesPath + ".pads_mode";     type: MappingPropertyDescriptor.Integer;  value: disabledMode  }
   MappingPropertyDescriptor { id: padsFocus;  path: propertiesPath + ".pads_focus";    type: MappingPropertyDescriptor.Boolean;  value: false         }
@@ -697,6 +698,11 @@ Module
           padsMode.value = remixMode;
           padsFocus.value = deckFocus;
         }
+        else if (focusedDeckType == DeckType.Stem)
+        {
+          padsMode.value = stemMode;
+          padsFocus.value = deckFocus;
+        }
         else if (unfocusedDeckType == DeckType.Remix)
         {
           padsMode.value = remixMode;
@@ -758,7 +764,8 @@ Module
         break;
 
       case remixMode:
-        isValid = hasRemixMode(thisDeckType) || hasRemixMode(otherDeckType);
+        isValid = hasRemixMode(thisDeckType) || hasRemixMode(otherDeckType)
+                  || thisDeckType == DeckType.Stem;
         break;
     }
 
@@ -1834,7 +1841,16 @@ Module
         Wire { from: "%surface%.hotcue";  to: SetPropertyAdapter { path: propertiesPath + ".top.pads_mode"; value: hotcueMode;  color: Color.Blue } enabled: hasHotcues(deckAType) }
         Wire { from: "%surface%.loop";    to: SetPropertyAdapter { path: propertiesPath + ".top.pads_mode"; value: loopMode;    color: Color.Blue } enabled: hasLoopMode(deckAType) }
         Wire { from: "%surface%.freeze";  to: ButtonScriptAdapter { brightness: ((topDeckPadsMode.value == freezeMode) ? onBrightness : dimmedBrightness); color: Color.Blue; onPress: { deckAExitFreeze = onFreezeButtonPress(topDeckPadsMode, deckAIsLoaded.value);  } onRelease: { onFreezeButtonRelease(topDeckPadsMode, deckAExitFreeze, deckAType); } } enabled: hasFreezeMode(deckAType) }
-        Wire { from: "%surface%.remix";   to: SetPropertyAdapter { path: propertiesPath + ".top.pads_mode"; value: remixMode;   color: (hasRemixMode(deckAType) ? Color.Blue : Color.White) } enabled: hasRemixMode(deckAType) || hasRemixMode(deckCType)  }
+        Wire {
+          from: "%surface%.remix"
+          to: ButtonScriptAdapter {
+            brightness: ((topDeckPadsMode.value == remixMode && (deckAType == DeckType.Remix || deckAType == DeckType.Stem)) ? onBrightness :
+                         ((deckAType == DeckType.Remix || deckAType == DeckType.Stem) ? 0.5 : dimmedBrightness))
+            color: Color.Blue
+            onPress: { topDeckPadsMode.value = remixMode; }
+          }
+          enabled: (deckAType == DeckType.Remix || deckAType == DeckType.Stem)
+        }
       }
 
       // Deck C
@@ -1845,7 +1861,16 @@ Module
         Wire { from: "%surface%.hotcue";  to: SetPropertyAdapter { path: propertiesPath + ".bottom.pads_mode"; value: hotcueMode;  color: Color.White } enabled: hasHotcues(deckCType) }
         Wire { from: "%surface%.loop";    to: SetPropertyAdapter { path: propertiesPath + ".bottom.pads_mode"; value: loopMode;    color: Color.White } enabled: hasLoopMode(deckCType) }
         Wire { from: "%surface%.freeze";  to: ButtonScriptAdapter  { brightness: ((bottomDeckPadsMode.value == freezeMode) ? onBrightness : dimmedBrightness); color: Color.White; onPress: { deckCExitFreeze = onFreezeButtonPress(bottomDeckPadsMode, deckCIsLoaded.value);  } onRelease: { onFreezeButtonRelease(bottomDeckPadsMode, deckCExitFreeze, deckCType); } } enabled: hasFreezeMode(deckCType) }
-        Wire { from: "%surface%.remix";   to: SetPropertyAdapter { path: propertiesPath + ".bottom.pads_mode"; value: remixMode;   color: (hasRemixMode(deckCType) ? Color.White : Color.Blue) } enabled: hasRemixMode(deckAType) || hasRemixMode(deckCType ) }
+        Wire {
+          from: "%surface%.remix"
+          to: ButtonScriptAdapter {
+            brightness: ((bottomDeckPadsMode.value == remixMode && (deckCType == DeckType.Remix || deckCType == DeckType.Stem)) ? onBrightness :
+                         ((deckCType == DeckType.Remix || deckCType == DeckType.Stem) ? 0.5 : dimmedBrightness))
+            color: Color.White
+            onPress: { bottomDeckPadsMode.value = remixMode; }
+          }
+          enabled: (deckCType == DeckType.Remix || deckCType == DeckType.Stem)
+        }
       }
 
       // Deck B
@@ -1856,7 +1881,16 @@ Module
         Wire { from: "%surface%.hotcue"; to: SetPropertyAdapter { path: propertiesPath + ".top.pads_mode"; value: hotcueMode;  color: Color.Blue } enabled: hasHotcues(deckBType)}
         Wire { from: "%surface%.loop";   to: SetPropertyAdapter { path: propertiesPath + ".top.pads_mode"; value: loopMode;    color: Color.Blue } enabled: hasLoopMode(deckBType) || (deckBType == DeckType.Remix) }
         Wire { from: "%surface%.freeze"; to: ButtonScriptAdapter  { brightness: ((topDeckPadsMode.value == freezeMode) ? onBrightness : dimmedBrightness); color: Color.Blue; onPress: { deckBExitFreeze = onFreezeButtonPress(topDeckPadsMode, deckBIsLoaded.value);  } onRelease: { onFreezeButtonRelease(topDeckPadsMode, deckBExitFreeze, deckBType); } } enabled: hasFreezeMode(deckBType) }
-        Wire { from: "%surface%.remix";  to: SetPropertyAdapter { path: propertiesPath + ".top.pads_mode"; value: remixMode;   color: (hasRemixMode(deckBType)? Color.Blue : Color.White) } enabled: hasRemixMode(deckBType) || hasRemixMode(deckDType) }
+        Wire {
+          from: "%surface%.remix"
+          to: ButtonScriptAdapter {
+            brightness: ((topDeckPadsMode.value == remixMode && (deckBType == DeckType.Remix || deckBType == DeckType.Stem)) ? onBrightness :
+                         ((deckBType == DeckType.Remix || deckBType == DeckType.Stem) ? 0.5 : dimmedBrightness))
+            color: Color.Blue
+            onPress: { topDeckPadsMode.value = remixMode; }
+          }
+          enabled: (deckBType == DeckType.Remix || deckBType == DeckType.Stem)
+        }
       }
 
       // Deck D
@@ -1867,7 +1901,16 @@ Module
         Wire { from: "%surface%.hotcue"; to: SetPropertyAdapter { path: propertiesPath + ".bottom.pads_mode"; value: hotcueMode;  color: Color.White } enabled: hasHotcues(deckDType) }
         Wire { from: "%surface%.loop";   to: SetPropertyAdapter { path: propertiesPath + ".bottom.pads_mode"; value: loopMode;    color: Color.White } enabled: hasLoopMode(deckDType ) }
         Wire { from: "%surface%.freeze"; to: ButtonScriptAdapter  { brightness: ((bottomDeckPadsMode.value == freezeMode) ? onBrightness : dimmedBrightness); color: Color.White; onPress: { deckDExitFreeze = onFreezeButtonPress(bottomDeckPadsMode, deckDIsLoaded.value);  } onRelease: { onFreezeButtonRelease(bottomDeckPadsMode, deckDExitFreeze, deckDType); } } enabled: hasFreezeMode(deckDType) }
-        Wire { from: "%surface%.remix";  to: SetPropertyAdapter { path: propertiesPath + ".bottom.pads_mode"; value: remixMode;   color: (hasRemixMode(deckDType)? Color.White : Color.Blue) } enabled: hasRemixMode(deckBType) || hasRemixMode(deckDType) }
+        Wire {
+          from: "%surface%.remix"
+          to: ButtonScriptAdapter {
+            brightness: ((bottomDeckPadsMode.value == remixMode && (deckDType == DeckType.Remix || deckDType == DeckType.Stem)) ? onBrightness :
+                         ((deckDType == DeckType.Remix || deckDType == DeckType.Stem) ? 0.5 : dimmedBrightness))
+            color: Color.White
+            onPress: { bottomDeckPadsMode.value = remixMode; }
+          }
+          enabled: (deckDType == DeckType.Remix || deckDType == DeckType.Stem)
+        }
       }
 
       //------------------------------------------------------------------------------------------------------------------
@@ -1947,6 +1990,17 @@ Module
           Wire { from: "%surface%.pads.6";   to: "decks.1.freeze_slicer.slice6" }
           Wire { from: "%surface%.pads.7";   to: "decks.1.freeze_slicer.slice7" }
           Wire { from: "%surface%.pads.8";   to: "decks.1.freeze_slicer.slice8" }
+        }
+
+        // Stem Mute (S5-style: pads 1-4 toggle stem slot mute)
+        WiresGroup
+        {
+          enabled: padsMode.value == stemMode
+
+          Wire { from: "%surface%.pads.1"; to: "decks.1.stems.1.muted" }
+          Wire { from: "%surface%.pads.2"; to: "decks.1.stems.2.muted" }
+          Wire { from: "%surface%.pads.3"; to: "decks.1.stems.3.muted" }
+          Wire { from: "%surface%.pads.4"; to: "decks.1.stems.4.muted" }
         }
 
         // Remix
@@ -2118,6 +2172,18 @@ Module
           Wire { from: "%surface%.pads.8";   to: "decks.3.freeze_slicer.slice8" }
         }
 
+
+        // Stem Mute (S5-style: pads 1-4 toggle stem slot mute)
+        WiresGroup
+        {
+          enabled: padsMode.value == stemMode
+
+          Wire { from: "%surface%.pads.1"; to: "decks.3.stems.1.muted" }
+          Wire { from: "%surface%.pads.2"; to: "decks.3.stems.2.muted" }
+          Wire { from: "%surface%.pads.3"; to: "decks.3.stems.3.muted" }
+          Wire { from: "%surface%.pads.4"; to: "decks.3.stems.4.muted" }
+        }
+
         // Remix
         WiresGroup
         {
@@ -2286,6 +2352,18 @@ Module
           Wire { from: "%surface%.pads.7";   to: "decks.2.freeze_slicer.slice7" }
           Wire { from: "%surface%.pads.8";   to: "decks.2.freeze_slicer.slice8" }
         }
+
+        // Stem Mute (S5-style: pads 1-4 toggle stem slot mute)
+        WiresGroup
+        {
+          enabled: padsMode.value == stemMode
+
+          Wire { from: "%surface%.pads.1"; to: "decks.2.stems.1.muted" }
+          Wire { from: "%surface%.pads.2"; to: "decks.2.stems.2.muted" }
+          Wire { from: "%surface%.pads.3"; to: "decks.2.stems.3.muted" }
+          Wire { from: "%surface%.pads.4"; to: "decks.2.stems.4.muted" }
+        }
+
         // Remix
         WiresGroup
         {
@@ -2453,6 +2531,17 @@ Module
           Wire { from: "%surface%.pads.6";   to: "decks.4.freeze_slicer.slice6" }
           Wire { from: "%surface%.pads.7";   to: "decks.4.freeze_slicer.slice7" }
           Wire { from: "%surface%.pads.8";   to: "decks.4.freeze_slicer.slice8" }
+        }
+
+        // Stem Mute (S5-style: pads 1-4 toggle stem slot mute)
+        WiresGroup
+        {
+          enabled: padsMode.value == stemMode
+
+          Wire { from: "%surface%.pads.1"; to: "decks.4.stems.1.muted" }
+          Wire { from: "%surface%.pads.2"; to: "decks.4.stems.2.muted" }
+          Wire { from: "%surface%.pads.3"; to: "decks.4.stems.3.muted" }
+          Wire { from: "%surface%.pads.4"; to: "decks.4.stems.4.muted" }
         }
 
         // Remix
