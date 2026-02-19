@@ -596,7 +596,13 @@ Module
   readonly property int freezeMode:   2
   readonly property int loopMode:     3
   readonly property int remixMode:    4
+
   readonly property int stemMode:     5
+
+  AppProperty { id: sfxStem1FilterOn; path: "app.traktor.decks." + padsFocusedDeckId + ".stems.1.filter_on" }
+  AppProperty { id: sfxStem2FilterOn; path: "app.traktor.decks." + padsFocusedDeckId + ".stems.2.filter_on" }
+  AppProperty { id: sfxStem3FilterOn; path: "app.traktor.decks." + padsFocusedDeckId + ".stems.3.filter_on" }
+  AppProperty { id: sfxStem4FilterOn; path: "app.traktor.decks." + padsFocusedDeckId + ".stems.4.filter_on" }
 
   MappingPropertyDescriptor { id: padsMode;   path: propertiesPath + ".pads_mode";     type: MappingPropertyDescriptor.Integer;  value: disabledMode  }
   MappingPropertyDescriptor { id: padsFocus;  path: propertiesPath + ".pads_focus";    type: MappingPropertyDescriptor.Boolean;  value: false         }
@@ -1995,12 +2001,28 @@ Module
         // Stem Mute (S5-style: pads 1-4 toggle stem slot mute)
         WiresGroup
         {
-          enabled: padsMode.value == stemMode
+          enabled: padsMode.value == stemMode && !module.shift
 
           Wire { from: "%surface%.pads.1"; to: "decks.1.stems.1.muted" }
           Wire { from: "%surface%.pads.2"; to: "decks.1.stems.2.muted" }
           Wire { from: "%surface%.pads.3"; to: "decks.1.stems.3.muted" }
           Wire { from: "%surface%.pads.4"; to: "decks.1.stems.4.muted" }
+        }
+
+        // Stem shift pads: FX send on/off (pads 1-4) + filter on/off (pads 5-8)
+        WiresGroup
+        {
+          enabled: padsMode.value == stemMode && module.shift
+
+          Wire { from: "%surface%.pads.1"; to: "decks.1.stems.1.fx_send_on" }
+          Wire { from: "%surface%.pads.2"; to: "decks.1.stems.2.fx_send_on" }
+          Wire { from: "%surface%.pads.3"; to: "decks.1.stems.3.fx_send_on" }
+          Wire { from: "%surface%.pads.4"; to: "decks.1.stems.4.fx_send_on" }
+
+          Wire { from: "%surface%.pads.5"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem1FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem1FilterOn.value = !sfxStem1FilterOn.value } } }
+          Wire { from: "%surface%.pads.6"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem2FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem2FilterOn.value = !sfxStem2FilterOn.value } } }
+          Wire { from: "%surface%.pads.7"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem3FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem3FilterOn.value = !sfxStem3FilterOn.value } } }
+          Wire { from: "%surface%.pads.8"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem4FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem4FilterOn.value = !sfxStem4FilterOn.value } } }
         }
 
         // Remix
@@ -2176,12 +2198,28 @@ Module
         // Stem Mute (S5-style: pads 1-4 toggle stem slot mute)
         WiresGroup
         {
-          enabled: padsMode.value == stemMode
+          enabled: padsMode.value == stemMode && !module.shift
 
           Wire { from: "%surface%.pads.1"; to: "decks.3.stems.1.muted" }
           Wire { from: "%surface%.pads.2"; to: "decks.3.stems.2.muted" }
           Wire { from: "%surface%.pads.3"; to: "decks.3.stems.3.muted" }
           Wire { from: "%surface%.pads.4"; to: "decks.3.stems.4.muted" }
+        }
+
+        // Stem shift pads: FX send on/off (pads 1-4) + filter on/off (pads 5-8)
+        WiresGroup
+        {
+          enabled: padsMode.value == stemMode && module.shift
+
+          Wire { from: "%surface%.pads.1"; to: "decks.3.stems.1.fx_send_on" }
+          Wire { from: "%surface%.pads.2"; to: "decks.3.stems.2.fx_send_on" }
+          Wire { from: "%surface%.pads.3"; to: "decks.3.stems.3.fx_send_on" }
+          Wire { from: "%surface%.pads.4"; to: "decks.3.stems.4.fx_send_on" }
+
+          Wire { from: "%surface%.pads.5"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem1FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem1FilterOn.value = !sfxStem1FilterOn.value } } }
+          Wire { from: "%surface%.pads.6"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem2FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem2FilterOn.value = !sfxStem2FilterOn.value } } }
+          Wire { from: "%surface%.pads.7"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem3FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem3FilterOn.value = !sfxStem3FilterOn.value } } }
+          Wire { from: "%surface%.pads.8"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem4FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem4FilterOn.value = !sfxStem4FilterOn.value } } }
         }
 
         // Remix
@@ -2356,12 +2394,28 @@ Module
         // Stem Mute (S5-style: pads 1-4 toggle stem slot mute)
         WiresGroup
         {
-          enabled: padsMode.value == stemMode
+          enabled: padsMode.value == stemMode && !module.shift
 
           Wire { from: "%surface%.pads.1"; to: "decks.2.stems.1.muted" }
           Wire { from: "%surface%.pads.2"; to: "decks.2.stems.2.muted" }
           Wire { from: "%surface%.pads.3"; to: "decks.2.stems.3.muted" }
           Wire { from: "%surface%.pads.4"; to: "decks.2.stems.4.muted" }
+        }
+
+        // Stem shift pads: FX send on/off (pads 1-4) + filter on/off (pads 5-8)
+        WiresGroup
+        {
+          enabled: padsMode.value == stemMode && module.shift
+
+          Wire { from: "%surface%.pads.1"; to: "decks.2.stems.1.fx_send_on" }
+          Wire { from: "%surface%.pads.2"; to: "decks.2.stems.2.fx_send_on" }
+          Wire { from: "%surface%.pads.3"; to: "decks.2.stems.3.fx_send_on" }
+          Wire { from: "%surface%.pads.4"; to: "decks.2.stems.4.fx_send_on" }
+
+          Wire { from: "%surface%.pads.5"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem1FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem1FilterOn.value = !sfxStem1FilterOn.value } } }
+          Wire { from: "%surface%.pads.6"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem2FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem2FilterOn.value = !sfxStem2FilterOn.value } } }
+          Wire { from: "%surface%.pads.7"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem3FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem3FilterOn.value = !sfxStem3FilterOn.value } } }
+          Wire { from: "%surface%.pads.8"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem4FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem4FilterOn.value = !sfxStem4FilterOn.value } } }
         }
 
         // Remix
@@ -2536,12 +2590,28 @@ Module
         // Stem Mute (S5-style: pads 1-4 toggle stem slot mute)
         WiresGroup
         {
-          enabled: padsMode.value == stemMode
+          enabled: padsMode.value == stemMode && !module.shift
 
           Wire { from: "%surface%.pads.1"; to: "decks.4.stems.1.muted" }
           Wire { from: "%surface%.pads.2"; to: "decks.4.stems.2.muted" }
           Wire { from: "%surface%.pads.3"; to: "decks.4.stems.3.muted" }
           Wire { from: "%surface%.pads.4"; to: "decks.4.stems.4.muted" }
+        }
+
+        // Stem shift pads: FX send on/off (pads 1-4) + filter on/off (pads 5-8)
+        WiresGroup
+        {
+          enabled: padsMode.value == stemMode && module.shift
+
+          Wire { from: "%surface%.pads.1"; to: "decks.4.stems.1.fx_send_on" }
+          Wire { from: "%surface%.pads.2"; to: "decks.4.stems.2.fx_send_on" }
+          Wire { from: "%surface%.pads.3"; to: "decks.4.stems.3.fx_send_on" }
+          Wire { from: "%surface%.pads.4"; to: "decks.4.stems.4.fx_send_on" }
+
+          Wire { from: "%surface%.pads.5"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem1FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem1FilterOn.value = !sfxStem1FilterOn.value } } }
+          Wire { from: "%surface%.pads.6"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem2FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem2FilterOn.value = !sfxStem2FilterOn.value } } }
+          Wire { from: "%surface%.pads.7"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem3FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem3FilterOn.value = !sfxStem3FilterOn.value } } }
+          Wire { from: "%surface%.pads.8"; to: ButtonScriptAdapter { color: Color.Blue; brightness: sfxStem4FilterOn.value ? onBrightness : dimmedBrightness; onPress: { sfxStem4FilterOn.value = !sfxStem4FilterOn.value } } }
         }
 
         // Remix
