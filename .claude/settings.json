@@ -1,0 +1,5 @@
+{
+  "permissions": {
+    "allow": ["Read(//Users/lsmith/htdocs/traktor-kontrol-qml/**)"]
+  }
+}
