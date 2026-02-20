@@ -604,7 +604,139 @@ Module
   AppProperty { id: sfxStem3FilterOn; path: "app.traktor.decks." + padsFocusedDeckId + ".stems.3.filter_on" }
   AppProperty { id: sfxStem4FilterOn; path: "app.traktor.decks." + padsFocusedDeckId + ".stems.4.filter_on" }
 
-  MappingPropertyDescriptor { id: padsMode;   path: propertiesPath + ".pads_mode";     type: MappingPropertyDescriptor.Integer;  value: disabledMode  }
+  // Dynamic AppProperties for the pad-focused deck's stems (stem FX pads 5-8).
+  // Paths update automatically when padsFocusedDeckId changes.
+  // Standard stem layout: Stem 1=Drums, Stem 2=Bass, Stem 3=Melody, Stem 4=Vocals.
+  AppProperty { id: sfxStem1Muted;    path: "app.traktor.decks." + padsFocusedDeckId + ".stems.1.muted"      }
+  AppProperty { id: sfxStem1FxSendOn; path: "app.traktor.decks." + padsFocusedDeckId + ".stems.1.fx_send_on" }
+  AppProperty { id: sfxStem2Muted;    path: "app.traktor.decks." + padsFocusedDeckId + ".stems.2.muted"      }
+  AppProperty { id: sfxStem2FxSendOn; path: "app.traktor.decks." + padsFocusedDeckId + ".stems.2.fx_send_on" }
+  AppProperty { id: sfxStem3Muted;    path: "app.traktor.decks." + padsFocusedDeckId + ".stems.3.muted"      }
+  AppProperty { id: sfxStem3FxSendOn; path: "app.traktor.decks." + padsFocusedDeckId + ".stems.3.fx_send_on" }
+  AppProperty { id: sfxStem4Muted;    path: "app.traktor.decks." + padsFocusedDeckId + ".stems.4.muted"      }
+  AppProperty { id: sfxStem4FxSendOn; path: "app.traktor.decks." + padsFocusedDeckId + ".stems.4.fx_send_on" }
+  // 4FX mode: assign the focused channel to FX unit 4 and control it directly.
+  // Dynamic property tracks the currently focused deck; static ones allow deactivating all other decks.
+  AppProperty { id: sfxChannelFxAssign4;   path: "app.traktor.mixer.channels." + padsFocusedDeckId + ".fx.assign.4" }
+  AppProperty { id: sfxChannelFxAssign4_1; path: "app.traktor.mixer.channels.1.fx.assign.4" }
+  AppProperty { id: sfxChannelFxAssign4_2; path: "app.traktor.mixer.channels.2.fx.assign.4" }
+  AppProperty { id: sfxChannelFxAssign4_3; path: "app.traktor.mixer.channels.3.fx.assign.4" }
+  AppProperty { id: sfxChannelFxAssign4_4; path: "app.traktor.mixer.channels.4.fx.assign.4" }
+  AppProperty { id: sfxFxUnit4Enabled;   path: "app.traktor.fx.4.enabled"  }
+  AppProperty { id: sfxFxUnit4DryWet;    path: "app.traktor.fx.4.dry_wet"  }
+  // Effect type index for FX unit 4 in Single FX mode (app.traktor.fx.4.select.1).
+  // To find correct values: select the effect manually in Traktor and read select.1 from the screen overlay.
+  AppProperty { id: sfxFxUnit4Select;    path: "app.traktor.fx.4.select.1" }
+  // FX unit 4 buttons (plural path).
+  // Turntable FX: buttons.1=AMNT toggle, buttons.2=RCK, buttons.3=BRK (brake trigger).
+  // Echo/Delay:   buttons.2=Freeze.
+  AppProperty { id: sfxFxUnit4Button1;   path: "app.traktor.fx.4.buttons.1" }
+  AppProperty { id: sfxFxUnit4Button2;   path: "app.traktor.fx.4.buttons.2" }
+  AppProperty { id: sfxFxUnit4Button3;   path: "app.traktor.fx.4.buttons.3" }
+  // FX unit 4 knobs (plural path).
+  // Turntable FX layout: knobs.1=AMNT (rocking amt), knobs.2=R.SPD (rocking speed), knobs.3=B.SPD (brake speed).
+  //   B.SPD guide: 0.9-1.0 = glitch/instant; 0.6-0.75 = 1-beat zip; 0.3-0.4 = 1-2 bar classic vinyl.
+  //   ~0.45 targets 2-4 beats.
+  // Echo/Delay layout: knobs.1=rate; knobs.2=feedback; knobs.3=depth. buttons.2=Freeze.
+  AppProperty { id: sfxFxUnit4Knob1;     path: "app.traktor.fx.4.knobs.1"  }
+  AppProperty { id: sfxFxUnit4Knob2;     path: "app.traktor.fx.4.knobs.2"  }
+  AppProperty { id: sfxFxUnit4Knob3;     path: "app.traktor.fx.4.knobs.3"  }
+  readonly property int sfxEchoEffectIndex:    6  // Echo
+  readonly property int sfxBrakerEffectIndex: 18  // Turntable FX (Braker)
+  // Per-pad held state for LEDs (hold-to-apply: press activates, release reverts).
+  property bool sfxPad5Held: false
+  property bool sfxPad6Held: false
+  property bool sfxPad7Held: false
+  property bool sfxPad8Held: false
+
+  // sfxPendingConfig holds the key-value settings the timer will apply once the effect is loaded.
+  // Keys: enabled (bool), dryWet (float), knob1/2/3 (float, optional), button2/3 (bool, optional).
+  property var sfxPendingConfig: null
+
+  // Start: applies stem routing, selects the effect, stores config for the timer, begins 150ms delay.
+  // config.stems[0..3]: which of the 4 stems to route through the FX unit.
+  // Stops any in-flight timer first so rapid pad switches don't double-fire.
+  function sfxFxUnitStart(effectIndex, config) {
+    sfxFxUnitSwitchTimer.stop()
+    sfxStem1FxSendOn.value      = config.stems[0] || false
+    sfxStem2FxSendOn.value      = config.stems[1] || false
+    sfxStem3FxSendOn.value      = config.stems[2] || false
+    sfxStem4FxSendOn.value      = config.stems[3] || false
+    sfxChannelFxAssign4_1.value = false
+    sfxChannelFxAssign4_2.value = false
+    sfxChannelFxAssign4_3.value = false
+    sfxChannelFxAssign4_4.value = false
+    sfxChannelFxAssign4.value   = true
+    sfxFxUnit4Select.value      = effectIndex
+    sfxPendingConfig            = config
+    sfxFxUnitSwitchTimer.start()
+  }
+
+  // Teardown: stops the timer and resets all FX unit + stem routing state to off.
+  // Call from onRelease (after per-pad mute logic) and from padsMode cleanup.
+  function sfxFxUnitTeardown() {
+    sfxFxUnitSwitchTimer.stop()
+    sfxPendingConfig            = null
+    sfxStem1FxSendOn.value      = false
+    sfxStem2FxSendOn.value      = false
+    sfxStem3FxSendOn.value      = false
+    sfxStem4FxSendOn.value      = false
+    sfxChannelFxAssign4.value   = false
+    sfxFxUnit4Enabled.value     = false
+    sfxFxUnit4DryWet.value      = 0.0
+    sfxFxUnit4Button2.value     = false
+    sfxFxUnit4Button3.value     = false
+  }
+
+  Timer
+  {
+    id: sfxFxUnitSwitchTimer
+    interval: 150
+    repeat:   false
+    onTriggered:
+    {
+      // Guard: disabling a WiresGroup may not reliably trigger onRelease for ButtonScriptAdapters,
+      // so check mode and shift here to avoid writing FX state in the wrong context.
+      if (padsMode.value == stemMode && !module.shift && sfxPendingConfig !== null)
+      {
+        var cfg = sfxPendingConfig
+        sfxFxUnit4Enabled.value = cfg.enabled || false
+        sfxFxUnit4DryWet.value  = cfg.dryWet  || 0.0
+        if (cfg.knob1   !== undefined) sfxFxUnit4Knob1.value   = cfg.knob1
+        if (cfg.knob2   !== undefined) sfxFxUnit4Knob2.value   = cfg.knob2
+        if (cfg.knob3   !== undefined) sfxFxUnit4Knob3.value   = cfg.knob3
+        if (cfg.button2)               sfxFxUnit4Button2.value = true
+        if (cfg.button3)               sfxFxUnit4Button3.value = true
+      }
+      sfxPendingConfig = null
+    }
+  }
+
+  MappingPropertyDescriptor
+  {
+    id: padsMode
+    path: propertiesPath + ".pads_mode"
+    type: MappingPropertyDescriptor.Integer
+    value: disabledMode
+    onValueChanged:
+    {
+      // Tear down all stem FX state when leaving stem mode.
+      // Static channel assigns cover all decks (focused deck may have changed since press).
+      if (value != stemMode)
+      {
+        sfxChannelFxAssign4_1.value = false
+        sfxChannelFxAssign4_2.value = false
+        sfxChannelFxAssign4_3.value = false
+        sfxChannelFxAssign4_4.value = false
+        sfxPad5Held = false
+        sfxPad6Held = false
+        sfxPad7Held = false
+        sfxPad8Held = false
+        sfxFxUnitTeardown()
+      }
+    }
+  }
+
   MappingPropertyDescriptor { id: padsFocus;  path: propertiesPath + ".pads_focus";    type: MappingPropertyDescriptor.Boolean;  value: false         }
 
   MappingPropertyDescriptor
@@ -2703,6 +2835,164 @@ Module
               Wire { from: "%surface%.pads.4"; to: SetPropertyAdapter { path: propertiesPath + ".bottom.sequencer_deck_slot"; value: 4 } }
 
               Wire { from: "%surface%.edit"  ; to: "decks.4.remix_sequencer.clear_selected_slot";  }
+            }
+          }
+        }
+      }
+
+      //------------------------------------------------------------------------------------------------------------------
+      // STEM FX PADS (Serato-style: pads 5-8 in stemMode — hold to apply, release to revert)
+      //
+      //  Standard stem layout: Stem 1=Drums  Stem 2=Bass  Stem 3=Melody  Stem 4=Vocals
+      //
+      //  Pad 5  Drums Echo          — mutes stem 1       + fx_send_on stem 1 only   (Echo on FX unit 4)
+      //  Pad 6  Instrumental Braker — mutes stems 1+2+3  + fx_send_on stems 1+2+3   (Turntable FX on FX unit 4)
+      //  Pad 7  Instrumental Echo   — mutes stems 1+2+3  + fx_send_on stems 1+2+3   (Echo on FX unit 4)
+      //  Pad 8  Vocal Echo          — mutes stem 4       + fx_send_on stem 4 only   (Echo on FX unit 4)
+      //
+      //  On press (stems not muted): route target stems through FX unit 4 (fx_send_on + channel assign),
+      //              select effect type; 150ms later the timer enables FX unit and fires the trigger button.
+      //              Stems stay audible until release — mute is applied on release, not press.
+      //  On press (stems muted):     unmute immediately; no FX.
+      //  On release: if FX was applied, mute target stems; always tears down FX unit state.
+      //
+      //  Effect index constants (sfxEchoEffectIndex / sfxBrakerEffectIndex) are defined near the
+      //  AppProperty block above.  Verify values by reading app.traktor.fx.4.select.1 in a running
+      //  Traktor session after manually selecting Echo / Turntable FX on FX unit 4.
+      //------------------------------------------------------------------------------------------------------------------
+
+      WiresGroup
+      {
+        enabled: padsMode.value == stemMode && !module.shift
+
+        // Pad 5: Drums Echo
+        //   Press (unmuted): Route stem 1 through Echo+Freeze on FX unit 4; mute applied on release.
+        //   Press (muted):   Unmute stem 1 immediately; no FX.
+        //   Release:         If FX was active, mute stem 1 and tear down FX unit.
+        Wire
+        {
+          from: "%surface%.pads.5"
+          to: ButtonScriptAdapter
+          {
+            brightness: sfxPad5Held ? onBrightness : (sfxStem1Muted.value ? 0.8 : 0.1)
+            onPress:
+            {
+              if (sfxStem1Muted.value)
+              {
+                sfxStem1Muted.value = false
+              }
+              else
+              {
+                sfxPad5Held = true
+                sfxFxUnitStart(sfxEchoEffectIndex, { stems: [true, false, false, false], enabled: true, dryWet: 1.0, button2: true })
+              }
+            }
+            onRelease:
+            {
+              if (sfxPad5Held) { sfxStem1Muted.value = true }
+              sfxPad5Held = false
+              sfxFxUnitTeardown()
+            }
+          }
+        }
+
+        // Pad 6: Instrumental Braker
+        //   Press (not all muted): Route stems 1+2+3 through Turntable FX (Braker) on FX unit 4; mute applied on release.
+        //   Press (all muted):     Unmute stems 1+2+3 immediately; no FX.
+        //   Release:               If FX was active, mute stems 1+2+3 and tear down FX unit.
+        //   knob3 = B.SPD (brake speed) at 0.55 ≈ 2-4 beats; 0.3 = classic 1-2 bar vinyl stop.
+        //   Short hold → brief pitch-down + mute on release; long hold → more of the brake cycle heard.
+        Wire
+        {
+          from: "%surface%.pads.6"
+          to: ButtonScriptAdapter
+          {
+            brightness: sfxPad6Held ? onBrightness : ((sfxStem1Muted.value && sfxStem2Muted.value && sfxStem3Muted.value) ? 0.8 : 0.1)
+            onPress:
+            {
+              var allMuted = sfxStem1Muted.value && sfxStem2Muted.value && sfxStem3Muted.value
+              if (allMuted)
+              {
+                sfxStem1Muted.value = false
+                sfxStem2Muted.value = false
+                sfxStem3Muted.value = false
+              }
+              else
+              {
+                sfxPad6Held = true
+                sfxFxUnitStart(sfxBrakerEffectIndex, { stems: [true, true, true, false], enabled: true, dryWet: 1.0, knob1: 1.0, knob2: 0.6, knob3: 0.55, button3: true })
+              }
+            }
+            onRelease:
+            {
+              if (sfxPad6Held) { sfxStem1Muted.value = true; sfxStem2Muted.value = true; sfxStem3Muted.value = true }
+              sfxPad6Held = false
+              sfxFxUnitTeardown()
+            }
+          }
+        }
+
+        // Pad 7: Instrumental Echo
+        //   Press (not all muted): Route stems 1+2+3 through Echo+Freeze on FX unit 4; mute applied on release.
+        //   Press (all muted):     Unmute stems 1+2+3 immediately; no FX.
+        //   Release:               If FX was active, mute stems 1+2+3 and tear down FX unit.
+        Wire
+        {
+          from: "%surface%.pads.7"
+          to: ButtonScriptAdapter
+          {
+            brightness: sfxPad7Held ? onBrightness : ((sfxStem1Muted.value && sfxStem2Muted.value && sfxStem3Muted.value) ? 0.8 : 0.1)
+            onPress:
+            {
+              var allMuted = sfxStem1Muted.value && sfxStem2Muted.value && sfxStem3Muted.value
+              if (allMuted)
+              {
+                sfxStem1Muted.value = false
+                sfxStem2Muted.value = false
+                sfxStem3Muted.value = false
+              }
+              else
+              {
+                sfxPad7Held = true
+                sfxFxUnitStart(sfxEchoEffectIndex, { stems: [true, true, true, false], enabled: true, dryWet: 1.0, button2: true })
+              }
+            }
+            onRelease:
+            {
+              if (sfxPad7Held) { sfxStem1Muted.value = true; sfxStem2Muted.value = true; sfxStem3Muted.value = true }
+              sfxPad7Held = false
+              sfxFxUnitTeardown()
+            }
+          }
+        }
+
+        // Pad 8: Vocal Echo
+        //   Press (unmuted): Route stem 4 through Echo+Freeze on FX unit 4; mute applied on release.
+        //   Press (muted):   Unmute stem 4 immediately; no FX.
+        //   Release:         If FX was active, mute stem 4 and tear down FX unit.
+        Wire
+        {
+          from: "%surface%.pads.8"
+          to: ButtonScriptAdapter
+          {
+            brightness: sfxPad8Held ? onBrightness : (sfxStem4Muted.value ? 0.8 : 0.1)
+            onPress:
+            {
+              if (sfxStem4Muted.value)
+              {
+                sfxStem4Muted.value = false
+              }
+              else
+              {
+                sfxPad8Held = true
+                sfxFxUnitStart(sfxEchoEffectIndex, { stems: [false, false, false, true], enabled: true, dryWet: 1.0, button2: true })
+              }
+            }
+            onRelease:
+            {
+              if (sfxPad8Held) { sfxStem4Muted.value = true }
+              sfxPad8Held = false
+              sfxFxUnitTeardown()
             }
           }
         }
