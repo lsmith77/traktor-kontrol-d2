@@ -624,40 +624,64 @@ Module
   AppProperty { id: sfxChannelFxAssign4_4; path: "app.traktor.mixer.channels.4.fx.assign.4" }
   AppProperty { id: sfxFxUnit4Enabled;   path: "app.traktor.fx.4.enabled"  }
   AppProperty { id: sfxFxUnit4DryWet;    path: "app.traktor.fx.4.dry_wet"  }
-  // Effect type index for FX unit 4 in Single FX mode (app.traktor.fx.4.select.1).
-  // To find correct values: select the effect manually in Traktor and read select.1 from the screen overlay.
-  AppProperty { id: sfxFxUnit4Select;    path: "app.traktor.fx.4.select.1" }
-  // FX unit 4 buttons (plural path).
-  // Turntable FX: buttons.1=AMNT toggle, buttons.2=RCK, buttons.3=BRK (brake trigger).
-  // Echo/Delay:   buttons.2=Freeze.
+  // FX unit 4 type: set to Group Mode (0) once per set.
+  AppProperty { id: sfxFxUnit4Type;      path: "app.traktor.fx.4.type" }
+  // Group Mode effect slots (three slots in group mode).
+  // To verify effect indices: select each effect in Group Mode in Traktor and read select.1, select.2, select.3 from overlay.
+  AppProperty { id: sfxFxUnit4Select1;   path: "app.traktor.fx.4.select.1" }
+  AppProperty { id: sfxFxUnit4Select2;   path: "app.traktor.fx.4.select.2" }
+  AppProperty { id: sfxFxUnit4Select3;   path: "app.traktor.fx.4.select.3" }
+  // FX unit 4 buttons (plural path) - Group Mode has simplified control.
+  // Delay T3 in Group Mode:     buttons.1=FEEDBACK toggle, buttons.2=MIX decay control
+  // Turntable FX in Group Mode: buttons.1=ON/toggle
   AppProperty { id: sfxFxUnit4Button1;   path: "app.traktor.fx.4.buttons.1" }
   AppProperty { id: sfxFxUnit4Button2;   path: "app.traktor.fx.4.buttons.2" }
   AppProperty { id: sfxFxUnit4Button3;   path: "app.traktor.fx.4.buttons.3" }
-  // FX unit 4 knobs (plural path).
-  // Turntable FX layout: knobs.1=AMNT (rocking amt), knobs.2=R.SPD (rocking speed), knobs.3=B.SPD (brake speed).
-  //   B.SPD guide: 0.9-1.0 = glitch/instant; 0.6-0.75 = 1-beat zip; 0.3-0.4 = 1-2 bar classic vinyl.
-  //   ~0.45 targets 2-4 beats.
-  // Echo/Delay layout: knobs.1=rate; knobs.2=feedback; knobs.3=depth. buttons.2=Freeze.
+  // FX unit 4 knobs (plural path) - Group Mode control layout.
+  // Delay T3 in Group Mode:    knobs.1=RATE, knobs.2=DECAY (shared reverb control)
+  // Turntable FX in Group Mode: knobs.1=B.SPD (like Single mode B.SPD); ON button toggles the effect.
   AppProperty { id: sfxFxUnit4Knob1;     path: "app.traktor.fx.4.knobs.1"  }
   AppProperty { id: sfxFxUnit4Knob2;     path: "app.traktor.fx.4.knobs.2"  }
   AppProperty { id: sfxFxUnit4Knob3;     path: "app.traktor.fx.4.knobs.3"  }
-  readonly property int sfxEchoEffectIndex:    6  // Echo
-  readonly property int sfxBrakerEffectIndex: 18  // Turntable FX (Braker)
+  // Group Mode effect indices - set once per set.
+  // FxType.Group = 0. Three slots: Slot 1=Delay T3 (echo RATE), Slot 2=Reverb (echo tail), Slot 3=Turntable FX.
+  readonly property int sfxFxTypeGroup:                 0   // Group Mode type value
+  readonly property int sfxDelayEffectIndexGroup:       7   // Delay T3 in Group Mode
+  readonly property int sfxReverbEffectIndexGroup:      20  // Reverb in Group Mode
+  readonly property int sfxTurntableFxEffectIndexGroup: 18  // Turntable FX in Group Mode
+  // Flag to track if group mode has been initialized (true = don't reinitialize every pad press)
+  property bool sfxGroupModeInitialized: false
   // Per-pad held state for LEDs (hold-to-apply: press activates, release reverts).
   property bool sfxPad5Held: false
   property bool sfxPad6Held: false
   property bool sfxPad7Held: false
   property bool sfxPad8Held: false
 
-  // sfxPendingConfig holds the key-value settings the timer will apply once the effect is loaded.
-  // Keys: enabled (bool), dryWet (float), knob1/2/3 (float, optional), button2/3 (bool, optional).
-  property var sfxPendingConfig: null
+  // Initialize FX unit 4 to Group Mode with Delay, Turntable FX, and Reverb slots (once per set).
+  // Call this once during setup/initialization to configure the FX unit.
+  function sfxGroupModeInit() {
+    if (!sfxGroupModeInitialized) {
+      // Guard: ensure effect indices are verified before initializing
+      if (sfxDelayEffectIndexGroup >= 0 && sfxTurntableFxEffectIndexGroup >= 0 && sfxReverbEffectIndexGroup >= 0) {
+        sfxFxUnit4Type.value    = sfxFxTypeGroup  // Set to Group Mode (0)
+        sfxFxUnit4Select1.value = sfxDelayEffectIndexGroup  // Slot 1: Delay
+        sfxFxUnit4Select2.value = sfxReverbEffectIndexGroup  // Slot 3: Reverb
+        sfxFxUnit4Select3.value = sfxTurntableFxEffectIndexGroup  // Slot 3: Turntable FX
+        sfxFxUnit4Enabled.value = true
+        sfxFxUnit4DryWet.value  = 0.0  // Start with dry (no effect)
+        sfxGroupModeInitialized = true
+      }
+    }
+  }
 
-  // Start: applies stem routing, selects the effect, stores config for the timer, begins 150ms delay.
+  // Group Mode: route specific stems through FX unit 4.
   // config.stems[0..3]: which of the 4 stems to route through the FX unit.
-  // Stops any in-flight timer first so rapid pad switches don't double-fire.
-  function sfxFxUnitStart(effectIndex, config) {
-    sfxFxUnitSwitchTimer.stop()
+  // Applies stem routing and effect settings immediately; FX unit remains set until manually changed.
+  function sfxFxUnitStartGroup(effectIndex, config) {
+    // Initialize group mode on first use
+    sfxGroupModeInit()
+    
+    // Route stems through FX unit 4
     sfxStem1FxSendOn.value      = config.stems[0] || false
     sfxStem2FxSendOn.value      = config.stems[1] || false
     sfxStem3FxSendOn.value      = config.stems[2] || false
@@ -667,16 +691,21 @@ Module
     sfxChannelFxAssign4_3.value = false
     sfxChannelFxAssign4_4.value = false
     sfxChannelFxAssign4.value   = true
-    sfxFxUnit4Select.value      = effectIndex
-    sfxPendingConfig            = config
-    sfxFxUnitSwitchTimer.start()
+    
+    // Apply effect-specific settings (knob values, button actions)
+    sfxFxUnit4DryWet.value      = config.dryWet  || 1.0
+    if (config.knob1 !== undefined) sfxFxUnit4Knob1.value = config.knob1
+    if (config.knob2 !== undefined) sfxFxUnit4Knob2.value = config.knob2
+    if (config.knob3 !== undefined) sfxFxUnit4Knob3.value = config.knob3
+    // Trigger any button actions if needed
+    if (config.button1) sfxFxUnit4Button1.value = true
+    if (config.button2) sfxFxUnit4Button2.value = true
+    if (config.button3) sfxFxUnit4Button3.value = true
   }
 
-  // Teardown: stops the timer and resets all FX unit + stem routing state to off.
+  // Teardown: resets stem routing and disables FX unit.
   // Call from onRelease (after per-pad mute logic) and from padsMode cleanup.
   function sfxFxUnitTeardown() {
-    sfxFxUnitSwitchTimer.stop()
-    sfxPendingConfig            = null
     sfxStem1FxSendOn.value      = false
     sfxStem2FxSendOn.value      = false
     sfxStem3FxSendOn.value      = false
@@ -684,32 +713,9 @@ Module
     sfxChannelFxAssign4.value   = false
     sfxFxUnit4Enabled.value     = false
     sfxFxUnit4DryWet.value      = 0.0
+    sfxFxUnit4Button1.value     = false
     sfxFxUnit4Button2.value     = false
     sfxFxUnit4Button3.value     = false
-  }
-
-  Timer
-  {
-    id: sfxFxUnitSwitchTimer
-    interval: 150
-    repeat:   false
-    onTriggered:
-    {
-      // Guard: disabling a WiresGroup may not reliably trigger onRelease for ButtonScriptAdapters,
-      // so check mode and shift here to avoid writing FX state in the wrong context.
-      if (padsMode.value == stemMode && !module.shift && sfxPendingConfig !== null)
-      {
-        var cfg = sfxPendingConfig
-        sfxFxUnit4Enabled.value = cfg.enabled || false
-        sfxFxUnit4DryWet.value  = cfg.dryWet  || 0.0
-        if (cfg.knob1   !== undefined) sfxFxUnit4Knob1.value   = cfg.knob1
-        if (cfg.knob2   !== undefined) sfxFxUnit4Knob2.value   = cfg.knob2
-        if (cfg.knob3   !== undefined) sfxFxUnit4Knob3.value   = cfg.knob3
-        if (cfg.button2)               sfxFxUnit4Button2.value = true
-        if (cfg.button3)               sfxFxUnit4Button3.value = true
-      }
-      sfxPendingConfig = null
-    }
   }
 
   MappingPropertyDescriptor
@@ -720,6 +726,11 @@ Module
     value: disabledMode
     onValueChanged:
     {
+      // Initialize group mode when entering stem mode (first time only).
+      if (value == stemMode)
+      {
+        sfxGroupModeInit()
+      }
       // Tear down all stem FX state when leaving stem mode.
       // Static channel assigns cover all decks (focused deck may have changed since press).
       if (value != stemMode)
@@ -2845,28 +2856,30 @@ Module
       //
       //  Standard stem layout: Stem 1=Drums  Stem 2=Bass  Stem 3=Melody  Stem 4=Vocals
       //
-      //  Pad 5  Drums Echo          — mutes stem 1       + fx_send_on stem 1 only   (Echo on FX unit 4)
-      //  Pad 6  Instrumental Braker — mutes stems 1+2+3  + fx_send_on stems 1+2+3   (Turntable FX on FX unit 4)
-      //  Pad 7  Instrumental Echo   — mutes stems 1+2+3  + fx_send_on stems 1+2+3   (Echo on FX unit 4)
-      //  Pad 8  Vocal Echo          — mutes stem 4       + fx_send_on stem 4 only   (Echo on FX unit 4)
+      //  Group Mode Effects (effect persists until manually changed):
+      //  Echo effect = Delay T3 (slot 1, RATE knob) + Reverb (slot 3, DECAY knob)
+      //  Turntable FX (slot 2): 1 knob for B.SPD, ON button to toggle effect.
+      //
+      //  Pad 5  Drums Echo        — mutes stem 1       + fx_send_on stem 1 only   (Delay T3 + Reverb on FX unit 4)
+      //  Pad 6  Instrumental Turntable FX — mutes stems 1+2+3  + fx_send_on stems 1+2+3   (Turntable FX on FX unit 4)
+      //  Pad 7  Instrumental Echo — mutes stems 1+2+3  + fx_send_on stems 1+2+3   (Delay T3 + Reverb on FX unit 4)
+      //  Pad 8  Vocal Echo        — mutes stem 4       + fx_send_on stem 4 only   (Delay T3 + Reverb on FX unit 4)
       //
       //  On press (stems not muted): route target stems through FX unit 4 (fx_send_on + channel assign),
-      //              select effect type; 150ms later the timer enables FX unit and fires the trigger button.
-      //              Stems stay audible until release — mute is applied on release, not press.
+      //              apply knob settings for Delay T3 RATE and Reverb DECAY. Stems stay audible until release —
+      //              mute is applied on release, not press.
       //  On press (stems muted):     unmute immediately; no FX.
-      //  On release: if FX was applied, mute target stems; always tears down FX unit state.
+      //  On release: if FX was applied, mute target stems; tear down FX unit state.
       //
-      //  Effect index constants (sfxEchoEffectIndex / sfxBrakerEffectIndex) are defined near the
-      //  AppProperty block above.  Verify values by reading app.traktor.fx.4.select.1 in a running
-      //  Traktor session after manually selecting Echo / Turntable FX on FX unit 4.
+      //  Effect indices for Group Mode (see sfxDelayEffectIndexGroup, sfxReverbEffectIndexGroup, sfxTurntableFxEffectIndexGroup).
       //------------------------------------------------------------------------------------------------------------------
 
       WiresGroup
       {
         enabled: padsMode.value == stemMode && !module.shift
 
-        // Pad 5: Drums Echo
-        //   Press (unmuted): Route stem 1 through Echo+Freeze on FX unit 4; mute applied on release.
+        // Pad 5: Drums Echo (Delay T3 + Reverb)
+        //   Press (unmuted): Route stem 1 through Echo on FX unit 4; mute applied on release.
         //   Press (muted):   Unmute stem 1 immediately; no FX.
         //   Release:         If FX was active, mute stem 1 and tear down FX unit.
         Wire
@@ -2884,7 +2897,7 @@ Module
               else
               {
                 sfxPad5Held = true
-                sfxFxUnitStart(sfxEchoEffectIndex, { stems: [true, false, false, false], enabled: true, dryWet: 1.0, button2: true })
+                sfxFxUnitStartGroup(sfxDelayEffectIndexGroup, { stems: [true, false, false, false], enabled: true, dryWet: 1.0, button1: true, knob1: 0.15, button2: true, knob2: 0.35 })
               }
             }
             onRelease:
@@ -2896,11 +2909,11 @@ Module
           }
         }
 
-        // Pad 6: Instrumental Braker
-        //   Press (not all muted): Route stems 1+2+3 through Turntable FX (Braker) on FX unit 4; mute applied on release.
+        // Pad 6: Instrumental Turntable FX
+        //   Press (not all muted): Route stems 1+2+3 through Turntable FX on FX unit 4; mute applied on release.
         //   Press (all muted):     Unmute stems 1+2+3 immediately; no FX.
         //   Release:               If FX was active, mute stems 1+2+3 and tear down FX unit.
-        //   knob3 = B.SPD (brake speed) at 0.55 ≈ 2-4 beats; 0.3 = classic 1-2 bar vinyl stop.
+        //   knob1 = B.SPD (brake speed) at 0.55 ≈ 2-4 beats; 0.3 = classic 1-2 bar vinyl stop.
         //   Short hold → brief pitch-down + mute on release; long hold → more of the brake cycle heard.
         Wire
         {
@@ -2920,7 +2933,7 @@ Module
               else
               {
                 sfxPad6Held = true
-                sfxFxUnitStart(sfxBrakerEffectIndex, { stems: [true, true, true, false], enabled: true, dryWet: 1.0, knob1: 1.0, knob2: 0.6, knob3: 0.55, button3: true })
+                sfxFxUnitStartGroup(sfxTurntableFxEffectIndexGroup, { stems: [true, true, true, false], enabled: true, dryWet: 1.0, knob3: 0.55, button3: true })
               }
             }
             onRelease:
@@ -2932,8 +2945,8 @@ Module
           }
         }
 
-        // Pad 7: Instrumental Echo
-        //   Press (not all muted): Route stems 1+2+3 through Echo+Freeze on FX unit 4; mute applied on release.
+        // Pad 7: Instrumental Echo (Delay T3 + Reverb)
+        //   Press (not all muted): Route stems 1+2+3 through Echo on FX unit 4; mute applied on release.
         //   Press (all muted):     Unmute stems 1+2+3 immediately; no FX.
         //   Release:               If FX was active, mute stems 1+2+3 and tear down FX unit.
         Wire
@@ -2954,7 +2967,7 @@ Module
               else
               {
                 sfxPad7Held = true
-                sfxFxUnitStart(sfxEchoEffectIndex, { stems: [true, true, true, false], enabled: true, dryWet: 1.0, button2: true })
+                sfxFxUnitStartGroup(sfxDelayEffectIndexGroup, { stems: [true, true, true, false], enabled: true, dryWet: 1.0, button1: true, knob1: 0.15, button2: true, knob2: 0.35 })
               }
             }
             onRelease:
@@ -2966,8 +2979,8 @@ Module
           }
         }
 
-        // Pad 8: Vocal Echo
-        //   Press (unmuted): Route stem 4 through Echo+Freeze on FX unit 4; mute applied on release.
+        // Pad 8: Vocal Echo (Delay T3 + Reverb)
+        //   Press (unmuted): Route stem 4 through Echo on FX unit 4; mute applied on release.
         //   Press (muted):   Unmute stem 4 immediately; no FX.
         //   Release:         If FX was active, mute stem 4 and tear down FX unit.
         Wire
@@ -2985,7 +2998,7 @@ Module
               else
               {
                 sfxPad8Held = true
-                sfxFxUnitStart(sfxEchoEffectIndex, { stems: [false, false, false, true], enabled: true, dryWet: 1.0, button2: true })
+                sfxFxUnitStartGroup(sfxDelayEffectIndexGroup, { stems: [false, false, false, true], enabled: true, dryWet: 1.0, button1: true, knob1: 0.45, button2: true, knob2: 0.35 })
               }
             }
             onRelease:
