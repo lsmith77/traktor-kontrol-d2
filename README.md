@@ -22,11 +22,13 @@ Effect will hold as the button will is held. After releasing, pressing the butto
 
 Note:
 
-- Stem FX uses FX Unit 4 in Single Mode
+- Stem FX uses FX Unit 4 in Single Mode (Delay T3/Reverb/Turntable FX) set when entering Stem Mode for the first time
+- If manual changes were made, pressing the "Remix" button while already in Stem Mode will force a reset of the FX unit
 - Configuration of this FX unit will be overridden and FX Unit 4 deck assignment will be cleared as well
 - For documentation on how Stem FX work inside Serato see https://support.serato.com/hc/en-us/articles/5700921209615-Using-Stems
 
 Required configuration:
 
-- Delay must be set as the 6th effect in the effect configuration
+- Delay T3 must be set as the 6th effect in the effect configuration
+- Reverb must be set as the 20th effect in the effect configuration
 - Turntable FX as the 18th effect in the effect configuration
