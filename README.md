@@ -1,8 +1,12 @@
-# Custom D2 QML setup
+# Custom D2 QML Setup
 
-This is a custom QML configuration for the D2 based on Traktor Pro 4.4.1.
+This is a custom QML configuration for the **Native Instruments Traktor Kontrol D2** based on Traktor Pro 4.4.1. It extends the default D2 interface with advanced Stem Mode controls inspired by Serato.
 
-## It includes the following changes:
+For comprehensive QML customization documentation, see the [traktor-kontrol-qml](https://github.com/lsmith77/traktor-kontrol-qml) repository.
+
+## Features
+
+### Stem Mode — Performance Pads
 
 Stem Mode — Performance pads:
 
