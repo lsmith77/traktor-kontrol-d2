@@ -41,30 +41,16 @@ Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_
 
 ## Installation
 
-### Option A: All at Once (Simplest)
+For complete setup guide, backup/restore options, and detailed instructions, see:
+**https://github.com/lsmith77/traktor-kontrol-qml/blob/main/08_SHARING_CHANGES.md**
+
+Quick install using the `install-traktor-mod` script:
 
 ```bash
-# Copy entire customization to Traktor
-cp -r qml/ ~/Library/Application\ Support/Native\ Instruments/Traktor\ Pro\ 4.4.2/
-
-# Restart Traktor
+git clone https://github.com/lsmith77/traktor-kontrol-d2.git
+cd traktor-kontrol-d2
+install-traktor-mod
 ```
-
-**Result**: All three patches applied. Complete Stem Mode ready.
-
-### Option B: Patches Only (Most Control)
-
-Use patches/ YAML files with traktor-mod tool:
-
-```bash
-traktor-mod apply \
-  --base /path/to/traktor-kontrol-qml/qml_4_4_1/ \
-  --patch patches/01-stem-mute-pads.yaml \
-  --patch patches/02-stem-fx-serato-style.yaml \
-  --patch patches/03-fx-send-filter-toggles.yaml
-```
-
-**Result**: Same features, installed step-by-step with full visibility.
 
 ---
 
