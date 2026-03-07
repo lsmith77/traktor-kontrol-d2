@@ -1,6 +1,6 @@
 # D2 Stem FX Send & Filter Toggles (Shift+Pads)
 
-**Version:** v1.2.3  
+**Version:** v0.5.0  
 **Traktor:** 4.4.1
 
 ## Description
@@ -16,7 +16,7 @@ This feature adds shift+pad controls for fine-grained stem manipulation in stem 
 
 ## Modified Files
 
-- `CSI/Common/Deck_S8Style.qml` - Adds stem filter properties and shift+pad stem control wiring
+- `qml/CSI/Common/Deck_S8Style.qml` - Adds stem filter properties and shift+pad stem control wiring
 
 ---
 
@@ -38,7 +38,7 @@ MappingPropertyDescriptor {
 
 ---
 
-## Changes in `CSI/Common/Deck_S8Style.qml`
+## Changes in `qml/CSI/Common/Deck_S8Style.qml`
 
 ### Stem Filter Properties
 
