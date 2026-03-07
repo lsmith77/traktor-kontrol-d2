@@ -1,7 +1,7 @@
 # D2 Stem Mute Pads
 
 **Version:** v0.5.0  
-**Traktor:** 4.4.1
+**Traktor:** 4.4.2
 
 ## Description
 
@@ -137,7 +137,7 @@ This is the **core feature**: When pads are in stem mode, each pad directly togg
 
 ### Requires (Prerequisites)
 
-- **Traktor Pro 4.4.1+** — Stem deck type native to Traktor 4.4.1+
+- **Traktor Pro 4.4.2+** — Stem deck type native to Traktor 4.4.2+
 - **D2 Controller** — Hardware recognized by Traktor
 - **Stem Tracks** — One or more audio tracks with stems loaded
 
@@ -159,7 +159,7 @@ This is the **core feature**: When pads are in stem mode, each pad directly togg
 
 ### Tested On
 
-- D2 with Traktor Pro 4.4.1
+- D2 with Traktor Pro 4.4.2
 - D2 with Traktor Pro 4.5+
 
 ### NOT Tested On
@@ -173,5 +173,5 @@ This is the **core feature**: When pads are in stem mode, each pad directly togg
 
 - **Mode Behavior:** In stem mode, only pads 1-4 are used (stem muting). Pads 5-8 are available for other features (like [D2 Serato-Style Stem FX](D2_stem-fx-serato-style.md)) that may depend on this feature.
 - **LED Feedback:** Remix button shows full brightness when active, 50% when available but inactive, dim when not available.
-- **Native Stem Support:** The `DeckType.Stem` type is a native Traktor feature (since 4.4.1); this feature simply wires the D2 pads to use it.
+- **Native Stem Support:** The `DeckType.Stem` type is a native Traktor feature (since 4.4.2); this feature simply wires the D2 pads to use it.
 - **Wiring Philosophy:** Direct toggle wiring (`Wire { from: pads.1; to: stems.1.muted }`) keeps the implementation simple and responsive.

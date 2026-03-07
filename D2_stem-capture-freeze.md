@@ -1,7 +1,7 @@
 # D2 Stem Capture Freeze
 
-**Version:** v0.1.0
-**Traktor:** 4.4.1
+**Version:** v0.5.0
+**Traktor:** 4.4.2
 
 ## Description
 
@@ -126,7 +126,7 @@ WiresGroup
   - Provides `sfxDelayStart`, `sfxTeardown`, `sfxShutdown`, the delay AppProperties, and stem mode detection
   - Must be installed first
 
-- **Traktor Pro 4.4.1+**
+- **Traktor Pro 4.4.2+**
 - **D2 Controller** — CSI/Common/Deck_S8Style.qml architecture
 - **FX Unit 3 in Single Mode** — Delay effect (shared with stem FX pads)
 

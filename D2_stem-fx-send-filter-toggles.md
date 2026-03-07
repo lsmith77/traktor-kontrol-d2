@@ -1,7 +1,7 @@
 # D2 Stem FX Send & Filter Toggles (Shift+Pads)
 
 **Version:** v0.5.0  
-**Traktor:** 4.4.1
+**Traktor:** 4.4.2
 
 ## Description
 
@@ -133,7 +133,7 @@ WiresGroup
   - Provides stem mode detection
   - Must be installed first
 
-- **Traktor Pro 4.4.1+** — Stem API required
+- **Traktor Pro 4.4.2+** — Stem API required
 - **D2 Controller with Shift Key** — Mapped by default
 
 ### Works Alongside
@@ -154,7 +154,7 @@ WiresGroup
 
 ### Tested On
 
-- D2 with Traktor Pro 4.4.1 (default shift key mapping)
+- D2 with Traktor Pro 4.4.2 (default shift key mapping)
 - D2 with Traktor Pro 4.5+
 
 ### NOT Tested On

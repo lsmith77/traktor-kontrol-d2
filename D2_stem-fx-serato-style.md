@@ -1,7 +1,7 @@
 # D2 Serato-Style Stem FX — Dual FX Unit
 
 **Version:** v0.5.0
-**Traktor:** 4.4.1
+**Traktor:** 4.4.2
 
 ## Description
 
@@ -141,7 +141,7 @@ Same as Pad 5, routes stem 4 only.
   - Provides stem mode detection and state management
   - Must be installed first
 
-- **Traktor Pro 4.4.1+**
+- **Traktor Pro 4.4.2+**
 - **D2 Controller** — CSI/Common/Deck_S8Style.qml architecture
 - **FX Unit 3 in Single Mode** — Delay effect
 - **FX Unit 4 in Group Mode** — Beatmasher + Gater + Turntable FX
@@ -160,7 +160,7 @@ Same as Pad 5, routes stem 4 only.
 
 ### Tested On
 
-- D2 with Traktor Pro 4.4.1
+- D2 with Traktor Pro 4.4.2
 
 ---
 

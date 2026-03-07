@@ -1,6 +1,6 @@
 # Traktor Kontrol D2 - Stem Mode Customization
 
-**Production-ready Stem Mode implementation for Traktor Kontrol D2 (4.4.1).**
+**Production-ready Stem Mode implementation for Traktor Kontrol D2 (4.4.2).**
 
 This repository contains a fully-featured D2 customization with Serato-inspired Stem Mode controls, designed as a working example of the hybrid layering approach documented in the main [traktor-kontrol-qml](https://github.com/lsmith77/traktor-kontrol-qml) ecosystem.
 
@@ -45,7 +45,7 @@ Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_
 
 ```bash
 # Copy entire customization to Traktor
-cp -r qml/ ~/Library/Application\ Support/Native\ Instruments/Traktor\ Pro\ 4.4.1/
+cp -r qml/ ~/Library/Application\ Support/Native\ Instruments/Traktor\ Pro\ 4.4.2/
 
 # Restart Traktor
 ```
@@ -205,7 +205,7 @@ See `patches/` YAML files for:
 
 The git history shows the evolution:
 
-- Commit 1: Stock Traktor 4.4.1 baseline
+- Commit 1: Stock Traktor 4.4.2 baseline
 - Commits 2-5: Features added incrementally
 - Current: All features combined
 
@@ -243,6 +243,6 @@ These chapters explain the **metadata lock file pattern** (like `package-lock.js
 
 ---
 
-**Status**: Stable for Traktor 4.4.1  
+**Status**: Stable for Traktor 4.4.2  
 **License**: MIT (fork, modify, use freely)  
 **Author**: Lukas Kahwe Smith
