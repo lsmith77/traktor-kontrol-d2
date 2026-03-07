@@ -1,6 +1,6 @@
 # D2 Stem Mute Pads
 
-**Version:** v1.2.3  
+**Version:** v0.5.0  
 **Traktor:** 4.4.1
 
 ## Description
@@ -17,7 +17,7 @@ This feature adds S5-style stem mute support to the Traktor Kontrol D2. When a t
 
 ## Modified Files
 
-- `CSI/Common/Deck_S8Style.qml` - Adds stem mode property (mode 5), Stem deck type support, remix button behavior, and direct pad-to-stem wiring
+- `qml/CSI/Common/Deck_S8Style.qml` - Adds stem mode property (mode 5), Stem deck type support, remix button behavior, and direct pad-to-stem wiring
 
 ---
 
@@ -48,7 +48,7 @@ Deck {
 
 ---
 
-## Changes in `CSI/Common/Deck_S8Style.qml`
+## Changes in `qml/CSI/Common/Deck_S8Style.qml`
 
 ### Stem Mode Property Definition
 

@@ -8,7 +8,7 @@ This repository contains a fully-featured D2 customization with Serato-inspired 
 
 ## What This Does
 
-Adds professional Stem Mode support to the D2 by extending `CSI/Common/Deck_S8Style.qml` with three coordinated patches:
+Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_S8Style.qml` with three coordinated patches:
 
 ### Patch 01: Stem Mute (S5-Style)
 
@@ -17,8 +17,9 @@ Adds professional Stem Mode support to the D2 by extending `CSI/Common/Deck_S8St
 
 ### Patch 02: Serato-Style Stem FX
 
-- Pads 5-8 control FX Unit 4 effects when in Stem Mode
-- Effect 1: Delay, Effect 2: Reverb, Effect 3: Turntable, Effect 4: Send Level
+- Pads 5-8 control two FX units when in Stem Mode
+- Pads 5, 7, 8: Delay + Freeze on FX Unit 3 (single mode)
+- Pad 6: Turntable FX brake on FX Unit 4 (group mode: Beatmasher + Gater + Turntable FX)
 - Familiar workflow for Serato users
 
 ### Patch 03: Advanced Controls (Shift+Pads)
@@ -26,6 +27,15 @@ Adds professional Stem Mode support to the D2 by extending `CSI/Common/Deck_S8St
 - Shift + Pads 1-4: Toggle FX Send on/off per stem
 - Shift + Pads 5-8: Toggle Filter on/off per stem
 - LED feedback shows current state
+
+### Patch 04: Stem Capture Freeze
+
+- Capture button toggles a persistent Delay+Freeze lock on all four stems
+- First press: freeze locked, button lights up
+- Second press: freeze released, button goes dark
+- Pressing any stem FX pad cancels the freeze instantly
+- **Configurable scope**: Works in stem mode by default; set `sfxCaptureFreezeOnlyInStemMode = false` to enable on all decks
+- Requires Patch 02 (Serato-Style Stem FX)
 
 ---
 
@@ -64,7 +74,7 @@ traktor-mod apply \
 | ---------------------------------------- | -------------------------------------------- |
 | `qml/CSI/Common/Deck_S8Style.qml`        | Core modification (all patches applied here) |
 | `patches/01-stem-mute-pads.yaml`         | Feature 1: Stem mode support                 |
-| `patches/02-stem-fx-serato-style.yaml`   | Feature 2: FX Unit 4 routing                 |
+| `patches/02-stem-fx-serato-style.yaml`   | Feature 2: FX Unit 3+4 routing               |
 | `patches/03-fx-send-filter-toggles.yaml` | Feature 3: Shift controls                    |
 | `config.yaml`                            | Hybrid mode guide & precedence               |
 | `DESIGN_PHILOSOPHY.md`                   | Why this approach                            |
@@ -73,13 +83,17 @@ traktor-mod apply \
 
 ## Configuration
 
-FX Unit 4 should contain these effects (in order):
+**FX Unit 3** — Single Mode, select: Echo
 
-1. Delay (Group Delay recommended)
-2. Reverb
+**FX Unit 4** — Group Mode, three slots (in order):
+
+1. Beatmasher
+2. Gater
 3. Turntable FX
 
-**Set in Traktor**: Preferences > Effects > Effect Units Configuration > Unit 4
+**Set in Traktor**: Preferences > Effects > Effect Units Configuration
+
+To reassign effects to different FX units, change `sfxDelayUnit` and `sfxTurntableUnit` in `qml/CSI/Common/Deck_S8Style.qml`.
 
 ---
 
@@ -88,7 +102,9 @@ FX Unit 4 should contain these effects (in order):
 ### When Stems Are Loaded
 
 - **Pads 1-4**: Toggle stem mute on/off (shows in mixer)
-- **Pads 5-8**: Control FX Unit 4 effects (Delay, Reverb, Turntable, Send)
+- **Pads 5, 7, 8**: Delay + Freeze via FX Unit 3 (single mode)
+- **Pad 6**: Turntable FX brake via FX Unit 4 (group mode)
+- **Capture button**: Toggle persistent Delay+Freeze lock on all four stems
 - **All decks**: Auto-detect stems and adapt accordingly
 
 ### With Shift Key
@@ -108,7 +124,7 @@ This D2 setup is **young and modular**:
 - Simple to add more features
 - Designed for evolution
 
-All modifications are in **CSI/Common/Deck_S8Style.qml** — a single file containing the pad mode logic. See patches/ YAML for exactly what changed and where.
+All modifications are in **qml/CSI/Common/Deck_S8Style.qml** — a single file containing the pad mode logic. See patches/ YAML for exactly what changed and where.
 
 **Git history**: `git log --oneline` shows the development of each feature (commits bd304ba through 47b413c).
 
@@ -129,11 +145,12 @@ All modifications are in **CSI/Common/Deck_S8Style.qml** — a single file conta
 - Test in Stem Mode first (normal mode doesn't have shift controls)
 - Check Traktor error log for QML syntax issues
 
-**FX Unit 4 pads not triggering effects?**
+**FX Unit pads not triggering effects?**
 
-- Verify Unit 4 has effects assigned (not empty)
-- Check deck has FX Unit 4 enabled
-- Try assigning effects manually in Traktor
+- Verify FX Unit 3 is in Single Mode with Delay selected
+- Verify FX Unit 4 is in Group Mode with Beatmasher/Gater/Turntable FX in slots 1-3
+- Check effect indices match (`sfxDelayEffectIndex`, `sfxBeatmasherIndex`, etc.) — verify via debug overlay
+- Try assigning effects manually in Traktor, then restart
 
 ---
 

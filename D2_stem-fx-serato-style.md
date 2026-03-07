@@ -1,20 +1,25 @@
-# D2 Serato-Style Stem FX — Group Mode
+# D2 Serato-Style Stem FX — Dual FX Unit
 
-**Version:** v1.2.3  
+**Version:** v0.5.0
 **Traktor:** 4.4.1
 
 ## Description
 
-This feature maps pads 5-8 to FX Unit 4 when in stem mode, using **Group Mode** with three effect slots: Delay T3 (slot 1) + Reverb (slot 2) + Turntable FX (slot 3).
+This feature maps pads 5-8 to two FX units when in stem mode:
 
-**Critical:** Pads 5, 7, and 8 both trigger Delay **and** Reverb together (slots 1+2). Pad 6 triggers only Turntable FX (slot 3). Users must verify their effect indices in Traktor match the code variables or adjust the variables accordingly.
+- **FX Unit 3 (Single Mode):** Delay + Freeze for delay pads (5, 7, 8)
+- **FX Unit 4 (Group Mode):** Beatmasher (slot 1) + Gater (slot 2) + Turntable FX (slot 3) for the turntable pad (6)
+
+Both units are initialized once when entering stem mode and reset when hitting the Remix button in stem mode.
+
+**To move effects to different FX units:** Change `sfxDelayUnit` (default: 3) or `sfxTurntableUnit` (default: 4) in `Deck_S8Style.qml` — all AppProperty paths update automatically.
 
 ## Features
 
-- **Pads 5-8 → FX Unit 4 Group Mode:** Provides Serato-style hold-to-apply effect control per stem.
+- **Pads 5-8 → Dual FX Units:** Serato-style hold-to-apply effect control per stem.
 - **Two Effect Types:**
-  - **Pads 5, 7, 8 (Echo):** Route stems through Delay T3 + Reverb simultaneously
-  - **Pad 6 (Turntable FX):** Routes stems through Turntable FX only
+  - **Pads 5, 7, 8 (Delay):** FX Unit 3 single mode — Delay + Freeze (button2)
+  - **Pad 6 (Turntable FX):** FX Unit 4 group mode slot 3 — Turntable FX BRK
 - **Per-Stem Routing:** Each pad controls different stem combinations:
   - Pad 5: Stem 1 only (Drums)
   - Pad 6: Stems 1+2+3 (Drums, Bass, Melody)
@@ -24,117 +29,105 @@ This feature maps pads 5-8 to FX Unit 4 when in stem mode, using **Group Mode** 
 
 ## Modified Files
 
-- `CSI/Common/Deck_S8Style.qml` (lines 645–3010) - Adds effect index variables, Group Mode init, and per-pad stem FX wiring
+- `qml/CSI/Common/Deck_S8Style.qml` — Adds dual FX unit properties, init/teardown functions, and per-pad stem FX wiring
 
 ---
 
 ## Configuration
 
-### MOD Settings
+### FX Unit Assignment
 
-Add this to your main D2.qml controller file:
+Change the unit numbers at the top of the stem FX block in `Deck_S8Style.qml`:
 
 ```qml
-// --- MOD SETTINGS: Serato-Style Stem FX ---
-MappingPropertyDescriptor {
-    id: seratoStemFxEnabledProp
-    path: "app.traktor.settings.serato_stem_fx_enabled"
-    initialValue: true  // Set to false to disable Serato-style FX
-}
-// --- END MOD SETTINGS ---
+readonly property int sfxDelayUnit:     3  // FX unit for single-mode Delay+Freeze (pads 5, 7, 8)
+readonly property int sfxTurntableUnit: 4  // FX unit for group-mode Turntable FX (pad 6)
 ```
 
-Configure effect indices in Deck_S8Style.qml (verify your own):
+Changing either value updates all AppProperty paths automatically — no other edits needed.
+
+### Effect Indices
+
+Verify your Traktor effect indices and update these constants if needed:
 
 ```qml
-readonly property int delayEffectIndex: 7      // Delay T3 (verify in Traktor)
-readonly property int reverbEffectIndex: 20    // Reverb (verify in Traktor)
-readonly property int turntableFxIndex: 18     // Turntable FX (verify in Traktor)
+readonly property int sfxDelayEffectIndex: 6   // Delay (single mode, verify in Traktor)
+readonly property int sfxBeatmasherIndex:  1   // Beatmasher (group mode slot 1)
+readonly property int sfxGaterIndex:       5   // Gater (group mode slot 2)
+readonly property int sfxTurntableFxIndex: 18  // Turntable FX (group mode slot 3)
 ```
 
 ---
 
-## Changes in `CSI/Common/Deck_S8Style.qml`
+## Changes in `qml/CSI/Common/Deck_S8Style.qml`
 
-### Effect Index Variables & Group Mode Init
+### FX Unit Constants & AppProperties
 
-**Location:** Lines 645–675 in `CSI/Common/Deck_S8Style.qml`
+Two sets of AppProperties — one for the delay unit (single mode) and one for the turntable unit (group mode). Both use `sfxDelayUnit` / `sfxTurntableUnit` constants in their paths for easy reassignment.
 
-Verify your effect indices in Traktor and update these variables accordingly:
+### Init / Teardown Functions
 
-- `sfxDelayEffectIndexGroup: 7` — Delay T3 effect index
-- `sfxReverbEffectIndexGroup: 20` — Reverb effect index
-- `sfxTurntableFxEffectIndexGroup: 18` — Turntable FX effect index
+- **`sfxInit()`** — Called on stem mode entry. Selects Delay on the delay unit (enabled, DryWet=0). Configures turntable unit to Group Mode with Beatmasher/Gater/Turntable FX (once, guarded by `sfxGroupModeInitialized`).
+- **`sfxDelayStart(config)`** — Routes stems through the delay unit, sets DryWet=1, activates Freeze (button2).
+- **`sfxTurntableStart(config)`** — Routes stems through the turntable unit, sets DryWet=1, triggers BRK (button3), sets B.SPD (knob3).
+- **`sfxTeardown()`** — Resets stem routing and both FX units to dry/idle (units stay enabled for fast re-use).
+- **`sfxShutdown()`** — Full teardown + clears all static channel assigns + disables both units. Called on stem mode exit or Remix button reset.
 
-Use `sfxGroupModeInit()` to configure FX Unit 4 once per deck, setting slots to Group Mode with all three effects.
+### Remix Button Reset
 
-Use `sfxFxUnitStartGroup(effectIndex, config)` to apply an effect combination to specific stems on pad press.
-
-Use `sfxFxUnitTeardown()` on pad release to reset stem routing.
+Pressing the Remix button while in stem mode calls `sfxShutdown()` then `sfxInit()` (with `sfxGroupModeInitialized = false` to force a full turntable unit reinit).
 
 ---
 
 ## Pad Implementation Details
 
-### Pad 5: Drums Echo (Delay T3 + Reverb, Stem 1 only)
+### Pad 5: Drums Delay (Delay+Freeze, Stem 1 only)
 
-**Location:** Lines 2885–2910 in `CSI/Common/Deck_S8Style.qml`
-
-- **Press (stem 1 unmuted):** Routes stem 1 through Delay T3 + Reverb; RATE ≈ 0.15, DECAY ≈ 0.35
+- **Press (stem 1 unmuted):** Routes stem 1 through Delay+Freeze on FX unit `sfxDelayUnit`
 - **Press (stem 1 muted):** Unmutes stem 1; no FX
-- **Release:** Mutes stem 1, tears down FX routing
+- **Release:** Mutes stem 1, tears down FX state
 
 ---
 
-### Pad 6: Instrumental Turntable FX (Turntable only, Stems 1+2+3)
+### Pad 6: Instrumental Turntable FX (Group Mode Slot 3, Stems 1+2+3)
 
-**Location:** Lines 2920–2945 in `CSI/Common/Deck_S8Style.qml`
-
-- **Press (stems 1+2+3 unmuted):** Routes stems 1, 2, 3 through Turntable FX; B.SPD ≈ 0.55
+- **Press (stems 1+2+3 unmuted):** Routes stems 1, 2, 3 through Turntable FX on FX unit `sfxTurntableUnit`; B.SPD ≈ 0.55
 - **Press (all three muted):** Unmutes stems 1, 2, 3; no FX
-- **Release:** Mutes stems 1, 2, 3, tears down FX routing
+- **Release:** Mutes stems 1, 2, 3, tears down FX state
 
 ---
 
-### Pad 7: Instrumental Echo (Delay T3 + Reverb, Stems 1+2+3)
-
-**Location:** Lines 2950–2980 in `CSI/Common/Deck_S8Style.qml`
+### Pad 7: Instrumental Delay (Delay+Freeze, Stems 1+2+3)
 
 Same as Pad 5, routes stems 1+2+3 (all but vocals).
 
 ---
 
-### Pad 8: Vocal Echo (Delay T3 + Reverb, Stem 4 only)
+### Pad 8: Vocal Delay (Delay+Freeze, Stem 4 only)
 
-**Location:** Lines 2990–3010 in `CSI/Common/Deck_S8Style.qml`
-
-Same as Pad 5, routes stem 4 only, with higher RATE (0.45 vs 0.15).
+Same as Pad 5, routes stem 4 only.
 
 ---
 
 ## Implementation Steps
 
-1. **Verify effect indices in Traktor:**
-   - Open Traktor Preferences > Effects > Effect Units
-   - Set FX Unit 4 to **Group Mode**
-   - Assign: Slot 1 = Delay T3, Slot 2 = Reverb, Slot 3 = Turntable FX
-   - Manually select each effect and read values from debug overlay
-   - Update variables if different from defaults (7, 20, 18)
+1. **Install the mod** — copy `qml/CSI/Common/Deck_S8Style.qml` to your Traktor folder.
 
-2. **Update Deck_S8Style.qml** with the correct effect indices and pad implementations (lines 645–3010).
+2. **Restart Traktor** — the mod configures both FX units automatically when you enter stem mode (FX unit modes, effect slot assignments, and effect selection are all set by `sfxInit()`; no manual Traktor configuration needed).
 
-3. **Restart Traktor** to apply changes.
+3. **If effects don't trigger correctly** — the hardcoded effect indices may not match your Traktor installation. See the [Effect Index Verification Guide](#effect-index-verification-guide) below to check and update the constants in the QML.
 
 ---
 
 ## Testing Checklist
 
 - [ ] Load a stem track and activate stem mode (Remix button)
-- [ ] Pad 5: Stem 1 audible with Delay T3 + Reverb echo
-- [ ] Pad 6: Stems 1+2+3 audible with Turntable FX breaker
-- [ ] Pad 7: Stems 1+2+3 audible with Delay T3 + Reverb echo
-- [ ] Pad 8: Stem 4 audible with Delay T3 + Reverb (slower RATE)
+- [ ] Pad 5: Stem 1 audible with Delay+Freeze
+- [ ] Pad 6: Stems 1+2+3 audible with Turntable FX (BRK brake)
+- [ ] Pad 7: Stems 1+2+3 audible with Delay+Freeze
+- [ ] Pad 8: Stem 4 audible with Delay+Freeze
 - [ ] Release pads: Stems mute immediately; FX state resets
+- [ ] Remix button in stem mode: FX units fully reinitialize
 - [ ] Rapid pad presses: No stutter or double-triggering
 - [ ] Test on all four decks
 
@@ -148,71 +141,62 @@ Same as Pad 5, routes stem 4 only, with higher RATE (0.45 vs 0.15).
   - Provides stem mode detection and state management
   - Must be installed first
 
-- **Traktor Pro 4.4.1+** — Group Mode FX Unit 4 required
+- **Traktor Pro 4.4.1+**
 - **D2 Controller** — CSI/Common/Deck_S8Style.qml architecture
-- **FX Unit 4 in Group Mode** — Must be configured with three effect slots
+- **FX Unit 3 in Single Mode** — Delay effect
+- **FX Unit 4 in Group Mode** — Beatmasher + Gater + Turntable FX
 
 ### Works Alongside
 
 - **Stem Mute Pads** ([D2_stem-mute-pads.md](D2_stem-mute-pads.md))
-  - Stem Mute uses pads 1-4
-  - Serato FX uses pads 5-8
-  - No conflict
+  - Stem Mute uses pads 1-4; Serato FX uses pads 5-8 — no conflict
 
 - **Stem FX Send & Filter** ([D2_stem-fx-send-filter-toggles.md](D2_stem-fx-send-filter-toggles.md))
-  - Shift+Pad interaction documented
-  - No conflict
+  - Shift+Pad interaction documented — no conflict
 
 ### Conflicts With
 
-- **Other FX Unit 4 Workflows** — This feature requires exclusive control of FX Unit 4
+- **Other workflows using FX Unit 3 or FX Unit 4** — These units are managed exclusively during stem mode
 
 ### Tested On
 
 - D2 with Traktor Pro 4.4.1
-- D2 with Group Mode effects (Delay T3, Reverb, Turntable FX)
-
-### NOT Tested On
-
-- S4 MK3, S8, X1 MK3 (different FX architecture)
-- FX Unit 4 in non-Group Mode configurations
 
 ---
 
 ## Effect Index Verification Guide
 
-Your Traktor installation may have effects in different order. The variables **must** match your actual effect indices:
+Your Traktor installation may have effects in a different order. Verify by selecting each effect manually and reading the value from the debug overlay:
 
-1. Open Traktor Preferences > Effects > Effect Units Configuration
-2. Set FX Unit 4 to **Group Mode** with three slots
-3. Assign your chosen effects to each slot
-4. In Traktor Mixer, manually select the first effect in Group Mode and read `app.traktor.fx.4.select.1` from debug overlay
-5. Repeat for `select.2` and `select.3`
-6. Update code variables to match
+- **Delay (single mode):** Set FX Unit 3 to Single Mode, select Delay → read `app.traktor.fx.3.select.1`
+- **Beatmasher:** Set FX Unit 4 to Group Mode, assign to slot 1 → read `app.traktor.fx.4.select.1`
+- **Gater:** Assign to slot 2 → read `app.traktor.fx.4.select.2`
+- **Turntable FX:** Assign to slot 3 → read `app.traktor.fx.4.select.3`
 
-**Common defaults:** 7 (Delay T3), 20 (Reverb), 18 (Turntable) — verify your own.
+**Known defaults:** Delay=6, Beatmasher=1, Gater=5, Turntable FX=18 — verify your own.
 
 ---
 
 ## Control Layout Reference
 
-| Pad | Effect       | Stems | Button/Knob   | Value     | Purpose            |
-| --- | ------------ | ----- | ------------- | --------- | ------------------ |
-| 5   | Delay+Reverb | 1     | button1,knob1 | true,0.15 | Delay RATE         |
-| 5   | Delay+Reverb | 1     | button2,knob2 | true,0.35 | Reverb DECAY       |
-| 6   | Turntable    | 1+2+3 | button3,knob3 | true,0.55 | BRK trigger, B.SPD |
-| 7   | Delay+Reverb | 1+2+3 | button1,knob1 | true,0.15 | Delay RATE         |
-| 7   | Delay+Reverb | 1+2+3 | button2,knob2 | true,0.35 | Reverb DECAY       |
-| 8   | Delay+Reverb | 4     | button1,knob1 | true,0.45 | Delay RATE (warm)  |
-| 8   | Delay+Reverb | 4     | button2,knob2 | true,0.35 | Reverb DECAY       |
+| Pad | FX Unit | Mode   | Effect       | Stems | Control         | Value      | Purpose         |
+| --- | ------- | ------ | ------------ | ----- | --------------- | ---------- | --------------- |
+| 5   | 3       | Single | Delay+Freeze | 1     | dryWet          | 0.3        | FX mix level    |
+| 5   | 3       | Single | Delay+Freeze | 1     | knob1           | 0.7        | TIME            |
+| 5   | 3       | Single | Delay+Freeze | 1     | knob2           | 0.0        | FEEDBACK (none) |
+| 5   | 3       | Single | Delay+Freeze | 1     | knob3           | 0.6        | DEPTH           |
+| 5   | 3       | Single | Delay+Freeze | 1     | button2         | true       | Freeze          |
+| 6   | 4       | Group  | Turntable FX | 1+2+3 | knob3, button3  | 0.55, true | B.SPD, BRK      |
+| 7   | 3       | Single | Delay+Freeze | 1+2+3 | (same as pad 5) | —          | —               |
+| 8   | 3       | Single | Delay+Freeze | 4     | (same as pad 5) | —          | —               |
 
 ---
 
 ## Notes
 
-- **Critical difference:** Pads 5, 7, 8 simultaneously activate both Delay T3 and Reverb (slots 1+2). Pad 6 activates only Turntable FX (slot 3).
+- **FX Unit 3** stays in single mode with Delay selected for the entire stem mode session; DryWet is 0 when idle, 0.3 on pad hold (TIME=0.7, FEEDBACK=0, DEPTH=0.6). Adjust knob values in the `sfxDelayStart` calls per pad.
+- **FX Unit 4** is configured once in group mode: Beatmasher (slot 1), Gater (slot 2), Turntable FX (slot 3). Pad 6 activates only slot 3 (BRK).
 - **LED feedback:** Bright when held (FX active), dim when ready.
-- **Effect persistence:** 3-slot config remains until you change Traktor settings; FX state resets per pad release.
-- **Turntable B.SPD:** 0.9–1.0 = glitch; 0.6–0.75 = 1-beat; 0.3–0.4 = 1–2 bar classic; 0.45 ≈ 2–4 beats.
+- **Turntable B.SPD:** 0.9–1.0 = glitch; 0.6–0.75 = 1-beat; 0.3–0.4 = 1–2 bar classic; 0.55 ≈ 2–4 beats.
 - **Shift mode:** Pads 5-8 access filter toggles when Shift is held (see [D2_stem-fx-send-filter-toggles.md](D2_stem-fx-send-filter-toggles.md)).
 - **Stem mode only:** This feature is disabled in other pad modes.
