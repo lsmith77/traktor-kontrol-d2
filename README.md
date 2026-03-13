@@ -8,7 +8,7 @@ This repository contains a fully-featured D2 customization with Serato-inspired 
 
 ## What This Does
 
-Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_S8Style.qml` with three coordinated patches:
+Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_S8Style.qml` with five coordinated patches:
 
 ### Patch 01: Stem Mute (S5-Style)
 
@@ -36,6 +36,16 @@ Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_
 - Pressing any stem FX pad cancels the freeze instantly
 - **Configurable scope**: Works in stem mode by default; set `sfxCaptureFreezeOnlyInStemMode = false` to enable on all decks
 - Requires Patch 02 (Serato-Style Stem FX)
+
+### Patch 05: Duplicate Deck
+
+- Edit button duplicates the focused deck to the sister deck (A↔C or B↔D)
+- Automatically splits stems: source keeps vocals only, target gets instrumentals only
+- If source was playing, target auto-plays at the same position for instant in-sync layering
+- Edit button LED is bright while the opposing deck is playing, dim when idle
+- Second press (while opposing deck is playing): stops the opposing deck instead of duplicating
+- **Configurable scope**: Works in stem mode by default; set `duplicateDeckOnlyInStemMode = false` to enable on all decks
+- Requires Patch 02 (Serato-Style Stem FX) — provides `sfxStem*Muted`, `stemMode`, and the outer WiresGroup
 
 ---
 
@@ -91,6 +101,7 @@ To reassign effects to different FX units, change `sfxDelayUnit` and `sfxTurntab
 - **Pads 5, 7, 8**: Delay + Freeze via FX Unit 3 (single mode)
 - **Pad 6**: Turntable FX brake via FX Unit 4 (group mode)
 - **Capture button**: Toggle persistent Delay+Freeze lock on all four stems
+- **Edit button**: Duplicate deck to sister deck with automatic vocal/instrumental split
 - **All decks**: Auto-detect stems and adapt accordingly
 
 ### With Shift Key
@@ -105,7 +116,7 @@ To reassign effects to different FX units, change `sfxDelayUnit` and `sfxTurntab
 
 This D2 setup is **young and modular**:
 
-- Three feature patches that layer cleanly
+- Five feature patches that layer cleanly
 - Easy to understand each piece
 - Simple to add more features
 - Designed for evolution

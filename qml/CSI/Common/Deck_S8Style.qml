@@ -438,6 +438,22 @@ Module
         screenViewProp.value = ScreenView.deck;
       }
     }
+
+    // Post-duplicate setup: apply stem split and auto-play when the target deck finishes loading.
+    if (deckId > 0 && deckId == duplicateDeckPendingTargetId)
+    {
+      // Target deck: mute vocals (stem 4), unmute instrumentals (stems 1-3).
+      dupTargetStem1Muted.value = false
+      dupTargetStem2Muted.value = false
+      dupTargetStem3Muted.value = false
+      dupTargetStem4Muted.value = true
+      // Start playing target deck if source was already running.
+      if (duplicateDeckSourceWasRunning)
+      {
+        dupTargetPlay.value = true
+      }
+      duplicateDeckPendingTargetId = 0
+    }
   }
 
   //------------------------------------------------------------------------------------------------------------------
@@ -615,6 +631,29 @@ Module
   AppProperty { id: sfxStem3FxSendOn; path: "app.traktor.decks." + padsFocusedDeckId + ".stems.3.fx_send_on" }
   AppProperty { id: sfxStem4Muted;    path: "app.traktor.decks." + padsFocusedDeckId + ".stems.4.muted"      }
   AppProperty { id: sfxStem4FxSendOn; path: "app.traktor.decks." + padsFocusedDeckId + ".stems.4.fx_send_on" }
+
+  // Duplicate deck triggers — one per direction (source→target).
+  AppProperty { id: dupDeck3From1; path: "app.traktor.decks.3.track.duplicate_deck.1" }  // AC: A→C
+  AppProperty { id: dupDeck1From3; path: "app.traktor.decks.1.track.duplicate_deck.3" }  // AC: C→A
+  AppProperty { id: dupDeck4From2; path: "app.traktor.decks.4.track.duplicate_deck.2" }  // BD: B→D
+  AppProperty { id: dupDeck2From4; path: "app.traktor.decks.2.track.duplicate_deck.4" }  // BD: D→B
+
+  // Dynamic bindings for the duplicate target deck — paths update when duplicateDeckPendingTargetId changes.
+  // Used by onDeckLoaded to apply mutes and start playback after the load completes.
+  AppProperty { id: dupTargetStem1Muted; path: "app.traktor.decks." + duplicateDeckPendingTargetId + ".stems.1.muted" }
+  AppProperty { id: dupTargetStem2Muted; path: "app.traktor.decks." + duplicateDeckPendingTargetId + ".stems.2.muted" }
+  AppProperty { id: dupTargetStem3Muted; path: "app.traktor.decks." + duplicateDeckPendingTargetId + ".stems.3.muted" }
+  AppProperty { id: dupTargetStem4Muted; path: "app.traktor.decks." + duplicateDeckPendingTargetId + ".stems.4.muted" }
+  AppProperty { id: dupTargetPlay;       path: "app.traktor.decks." + duplicateDeckPendingTargetId + ".play" }
+
+  // Per-deck play/pause — used to stop the opposing deck on second Edit press.
+  // Static paths avoid the stale-value race that dynamic AppProperty path rebinding can introduce.
+  // Path: app.traktor.decks.N.play (bool) — true = playing, false = stopped.
+  AppProperty { id: deckAPlay; path: "app.traktor.decks.1.play" }
+  AppProperty { id: deckBPlay; path: "app.traktor.decks.2.play" }
+  AppProperty { id: deckCPlay; path: "app.traktor.decks.3.play" }
+  AppProperty { id: deckDPlay; path: "app.traktor.decks.4.play" }
+
   // FX unit constants — change these to reassign effects to different FX units.
   // sfxDelayUnit:     single-mode Delay+Freeze (pads 5, 7, 8).
   // sfxTurntableUnit: group-mode Turntable FX with Beatmasher/Gater/Turntable FX (pad 6).
@@ -680,6 +719,25 @@ Module
   // Configuration: whether Capture Freeze only works in stem mode (true) or on all decks (false).
   // Set to false to enable Capture Freeze on any deck, including non-stems and Remix decks.
   property bool sfxCaptureFreezeOnlyInStemMode: true
+
+  // Configuration: whether Duplicate Deck (Edit) only works in stem mode (true) or always (false).
+  // Set to false to allow Edit to duplicate the current deck on any deck type.
+  property bool duplicateDeckOnlyInStemMode: true
+
+  // State: target deck awaiting post-load mute+play setup (0 = no pending duplicate).
+  property int  duplicateDeckPendingTargetId:    0
+  property bool duplicateDeckSourceWasRunning:   false
+
+  // Live opposing deck ID — the sister deck of whichever deck currently has pad focus.
+  // Uses padsFocus (not deckFocus) since stem mode is pad-focused; the two can diverge.
+  readonly property int  duplicateDeckTargetId: padsFocus.value ? topDeckId : bottomDeckId
+
+  // Whether the opposing deck is currently running, derived from the static deckXRunning AppProperties.
+  // Avoids the async stale-value race that AppProperties with dynamic path bindings can have on rebind.
+  readonly property bool duplicateDeckOpposingRunning:
+    duplicateDeckTargetId == 1 ? deckARunning.value :
+    duplicateDeckTargetId == 2 ? deckBRunning.value :
+    duplicateDeckTargetId == 3 ? deckCRunning.value : deckDRunning.value
 
   // Initialize both FX units when entering stem mode.
   // Delay unit stays in single mode throughout the session (effect selected once, enabled with dry signal).
@@ -1160,7 +1218,7 @@ Module
     showDisplayButtonAreaResetTimer.restart();
   }
 
-  Wire { from: "%surface%.edit"; to: ButtonScriptAdapter { brightness: (isInEditMode ? onBrightness : dimmedBrightness); onPress: onEditPressed(); onRelease: onEditReleased(); } enabled: hasEditMode(focusedDeckType) && module.screenView.value == ScreenView.deck }
+  Wire { from: "%surface%.edit"; to: ButtonScriptAdapter { brightness: (isInEditMode ? onBrightness : dimmedBrightness); onPress: onEditPressed(); onRelease: onEditReleased(); } enabled: hasEditMode(focusedDeckType) && module.screenView.value == ScreenView.deck && padsMode.value != stemMode }
 
   function onEditPressed()
   {
@@ -3092,6 +3150,69 @@ Module
               {
                 sfxCaptureFreezeActive = true
                 sfxDelayStart({ stems: [true, true, true, true], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button2: true })
+              }
+            }
+          }
+        }
+      }
+
+      // Edit: Duplicate focused deck to the other deck in the pair (A↔C or B↔D).
+      //   On press: mutes instrumentals on source, triggers duplicate, records running state.
+      //   On load:  onDeckLoaded mutes vocals on target and auto-plays if source was running.
+      //   Note: the standard beatgrid Edit wire is guarded with padsMode != stemMode so there is no conflict.
+      WiresGroup
+      {
+        enabled: (duplicateDeckOnlyInStemMode ? padsMode.value == stemMode : true)
+
+        Wire
+        {
+          from: "%surface%.edit"
+          to: ButtonScriptAdapter
+          {
+            brightness: duplicateDeckOpposingRunning ? onBrightness : dimmedBrightness
+            onPress:
+            {
+              if (duplicateDeckOpposingRunning)
+              {
+                // Opposing deck is playing — stop it by setting app.traktor.decks.N.play to false.
+                // (false = stopped, true = playing; same property auto-play uses to start the deck)
+                switch (duplicateDeckTargetId) {
+                  case 1: deckAPlay.value = false; break
+                  case 2: deckBPlay.value = false; break
+                  case 3: deckCPlay.value = false; break
+                  case 4: deckDPlay.value = false; break
+                }
+              }
+              else
+              {
+                // Record running state before anything changes.
+                switch (padsFocusedDeckId) {
+                  case 1: duplicateDeckSourceWasRunning = deckARunning.value; break
+                  case 2: duplicateDeckSourceWasRunning = deckBRunning.value; break
+                  case 3: duplicateDeckSourceWasRunning = deckCRunning.value; break
+                  case 4: duplicateDeckSourceWasRunning = deckDRunning.value; break
+                }
+
+                // Set pending target so onDeckLoaded knows which deck to finish setting up.
+                duplicateDeckPendingTargetId = duplicateDeckTargetId
+
+                // Source deck: mute instrumentals (stems 1-3), keep vocals (stem 4) playing.
+                sfxStem1Muted.value = true
+                sfxStem2Muted.value = true
+                sfxStem3Muted.value = true
+                sfxStem4Muted.value = false
+
+                // Trigger the duplicate.
+                if (decksAssignment == DecksAssignment.AC)
+                {
+                  if (!padsFocus.value) dupDeck3From1.value = true  // A→C
+                  else                  dupDeck1From3.value = true  // C→A
+                }
+                else
+                {
+                  if (!padsFocus.value) dupDeck4From2.value = true  // B→D
+                  else                  dupDeck2From4.value = true  // D→B
+                }
               }
             }
           }
