@@ -44,12 +44,12 @@ Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_
 For complete setup guide, backup/restore options, and detailed instructions, see:
 **https://github.com/lsmith77/traktor-kontrol-qml/blob/main/08_SHARING_CHANGES.md**
 
-Quick install using the `install-traktor-mod` script:
+Quick install using the `traktor-mod` script:
 
 ```bash
 git clone https://github.com/lsmith77/traktor-kontrol-d2.git
 cd traktor-kontrol-d2
-install-traktor-mod
+traktor-mod
 ```
 
 ---
