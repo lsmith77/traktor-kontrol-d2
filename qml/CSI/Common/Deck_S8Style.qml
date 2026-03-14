@@ -3018,7 +3018,7 @@ Module
               else
               {
                 sfxPad5Held = true
-                sfxDelayStart({ stems: [true, false, false, false], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button2: true })
+                sfxDelayStart({ stems: [true, false, false, false], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button1: true, button2: true })
               }
             }
             onRelease:
@@ -3088,7 +3088,7 @@ Module
               else
               {
                 sfxPad7Held = true
-                sfxDelayStart({ stems: [true, true, true, false], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button2: true })
+                sfxDelayStart({ stems: [true, false, false, false], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button1: true, button2: true })
               }
             }
             onRelease:
@@ -3119,7 +3119,7 @@ Module
               else
               {
                 sfxPad8Held = true
-                sfxDelayStart({ stems: [false, false, false, true], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button2: true })
+                sfxDelayStart({ stems: [true, false, false, false], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button1: true, button2: true })
               }
             }
             onRelease:
@@ -3149,7 +3149,7 @@ Module
               else
               {
                 sfxCaptureFreezeActive = true
-                sfxDelayStart({ stems: [true, true, true, true], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button2: true })
+                sfxDelayStart({ stems: [true, true, true, true], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button1: true, button2: true })
               }
             }
           }
