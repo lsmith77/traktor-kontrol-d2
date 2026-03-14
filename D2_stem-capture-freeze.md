@@ -43,7 +43,7 @@ property bool sfxCaptureFreezeOnlyInStemMode: true
 Same Delay+Freeze settings as the stem FX pads:
 
 ```qml
-sfxDelayStart({ stems: [true, true, true, true], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button2: true })
+sfxDelayStart({ stems: [true, true, true, true], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button1: true, button1: true, button2: true })
 ```
 
 Adjust `dryWet`, `knob1` (TIME), `knob2` (FEEDBACK), `knob3` (DEPTH) to taste.
@@ -86,7 +86,7 @@ Wire
       else
       {
         sfxCaptureFreezeActive = true
-        sfxDelayStart({ stems: [true, true, true, true], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button2: true })
+        sfxDelayStart({ stems: [true, true, true, true], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button1: true, button2: true })
       }
     }
   }
