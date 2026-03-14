@@ -654,6 +654,13 @@ Module
   AppProperty { id: deckCPlay; path: "app.traktor.decks.3.play" }
   AppProperty { id: deckDPlay; path: "app.traktor.decks.4.play" }
 
+  // Target-deck stem mutes bound to duplicateDeckTargetId — stable before onPress fires so no
+  // rebinding race.  Used to re-enable all stem slots on the target deck on the second Edit press.
+  AppProperty { id: dupStopTargetStem1Muted; path: "app.traktor.decks." + duplicateDeckTargetId + ".stems.1.muted" }
+  AppProperty { id: dupStopTargetStem2Muted; path: "app.traktor.decks." + duplicateDeckTargetId + ".stems.2.muted" }
+  AppProperty { id: dupStopTargetStem3Muted; path: "app.traktor.decks." + duplicateDeckTargetId + ".stems.3.muted" }
+  AppProperty { id: dupStopTargetStem4Muted; path: "app.traktor.decks." + duplicateDeckTargetId + ".stems.4.muted" }
+
   // FX unit constants — change these to reassign effects to different FX units.
   // sfxDelayUnit:     single-mode Delay+Freeze (pads 5, 7, 8).
   // sfxTurntableUnit: group-mode Turntable FX with Beatmasher/Gater/Turntable FX (pad 6).
@@ -3182,6 +3189,16 @@ Module
                   case 3: deckCPlay.value = false; break
                   case 4: deckDPlay.value = false; break
                 }
+
+                // Re-enable all stem slots on both decks (undo the vocal/instrumental split).
+                dupStopTargetStem1Muted.value = false
+                dupStopTargetStem2Muted.value = false
+                dupStopTargetStem3Muted.value = false
+                dupStopTargetStem4Muted.value = false
+                sfxStem1Muted.value = false
+                sfxStem2Muted.value = false
+                sfxStem3Muted.value = false
+                sfxStem4Muted.value = false
               }
               else
               {
@@ -3196,6 +3213,11 @@ Module
                 // Set pending target so onDeckLoaded knows which deck to finish setting up.
                 duplicateDeckPendingTargetId = duplicateDeckTargetId
 
+                // Target deck: keep instrumentals (stems 1-3) playing, mute vocals (stem 4).
+                dupStopTargetStem1Muted.value = false
+                dupStopTargetStem2Muted.value = false
+                dupStopTargetStem3Muted.value = false
+                dupStopTargetStem4Muted.value = true
                 // Source deck: mute instrumentals (stems 1-3), keep vocals (stem 4) playing.
                 sfxStem1Muted.value = true
                 sfxStem2Muted.value = true

@@ -26,7 +26,7 @@ If the source deck was already playing when Edit was pressed, the target deck st
 - **Instant stem split:** No manual pad-press required — instruments and vocals separate automatically.
 - **Auto-play:** If source is running, target starts playing immediately after load.
 - **LED feedback:** Edit button is bright while the opposing deck is playing, dim when idle.
-- **Stop on second press:** If the opposing deck is already playing, pressing Edit stops it instead of duplicating again.
+- **Stop on second press:** If the opposing deck is already playing, pressing Edit stops it and re-enables all stem slots on both decks.
 - **Pair-aware:** Automatically resolves source/target from the current deck assignment and pad focus.
 - **No conflict with beatgrid Edit mode:** The standard beatgrid Edit wire is guarded with `padsMode.value != stemMode`, so in stem mode the Edit button exclusively duplicates; outside stem mode it still opens beatgrid edit as usual.
 - **No conflict with Capture Freeze:** Capture Freeze uses the Capture button; this feature uses Edit.
@@ -99,6 +99,13 @@ AppProperty { id: deckAPlay; path: "app.traktor.decks.1.play" }
 AppProperty { id: deckBPlay; path: "app.traktor.decks.2.play" }
 AppProperty { id: deckCPlay; path: "app.traktor.decks.3.play" }
 AppProperty { id: deckDPlay; path: "app.traktor.decks.4.play" }
+
+// Target-deck stem mutes bound to duplicateDeckTargetId — stable before onPress fires so no
+// rebinding race.  Used to re-enable all stem slots on the target deck on the second Edit press.
+AppProperty { id: dupStopTargetStem1Muted; path: "app.traktor.decks." + duplicateDeckTargetId + ".stems.1.muted" }
+AppProperty { id: dupStopTargetStem2Muted; path: "app.traktor.decks." + duplicateDeckTargetId + ".stems.2.muted" }
+AppProperty { id: dupStopTargetStem3Muted; path: "app.traktor.decks." + duplicateDeckTargetId + ".stems.3.muted" }
+AppProperty { id: dupStopTargetStem4Muted; path: "app.traktor.decks." + duplicateDeckTargetId + ".stems.4.muted" }
 ```
 
 ### `onDeckLoaded` Extension
@@ -157,6 +164,16 @@ WiresGroup
             case 3: deckCPlay.value = false; break
             case 4: deckDPlay.value = false; break
           }
+
+          // Re-enable all stem slots on both decks (undo the vocal/instrumental split).
+          dupStopTargetStem1Muted.value = false
+          dupStopTargetStem2Muted.value = false
+          dupStopTargetStem3Muted.value = false
+          dupStopTargetStem4Muted.value = false
+          sfxStem1Muted.value = false
+          sfxStem2Muted.value = false
+          sfxStem3Muted.value = false
+          sfxStem4Muted.value = false
         }
         else
         {
@@ -199,7 +216,7 @@ WiresGroup
 | Action                                              | Result                                                          |
 | --------------------------------------------------- | --------------------------------------------------------------- |
 | Edit (stem mode, opposing deck idle)                | Duplicate + stem split + auto-play; button lights up            |
-| Edit (stem mode, opposing deck **playing**)         | Stop opposing deck; button goes dim                             |
+| Edit (stem mode, opposing deck **playing**)         | Stop opposing deck; re-enable all stems on both decks; button goes dim |
 | Edit (outside stem mode)                            | Beatgrid edit mode (unchanged)                                  |
 | Capture (stem mode)                                 | Capture Freeze toggle (unchanged)                               |
 
