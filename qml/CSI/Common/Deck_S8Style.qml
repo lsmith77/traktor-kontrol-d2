@@ -452,7 +452,7 @@ Module
       {
         dupTargetPlay.value = true
       }
-      duplicateDeckPendingTargetId = 0
+      duplicateDeckPendingTargetId = -1
     }
   }
 
@@ -731,8 +731,8 @@ Module
   // Set to false to allow Edit to duplicate the current deck on any deck type.
   property bool duplicateDeckOnlyInStemMode: true
 
-  // State: target deck awaiting post-load mute+play setup (0 = no pending duplicate).
-  property int  duplicateDeckPendingTargetId:    0
+  // State: target deck awaiting post-load mute+play setup (-1 = no pending duplicate).
+  property int  duplicateDeckPendingTargetId:    -1
   property bool duplicateDeckSourceWasRunning:   false
 
   // Live opposing deck ID — the sister deck of whichever deck currently has pad focus.
@@ -3095,7 +3095,7 @@ Module
               else
               {
                 sfxPad7Held = true
-                sfxDelayStart({ stems: [true, false, false, false], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button1: true, button2: true })
+                sfxDelayStart({ stems: [true, true, true, false], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button1: true, button2: true })
               }
             }
             onRelease:
@@ -3126,7 +3126,7 @@ Module
               else
               {
                 sfxPad8Held = true
-                sfxDelayStart({ stems: [true, false, false, false], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button1: true, button2: true })
+                sfxDelayStart({ stems: [false, false, false, true], dryWet: 0.3, knob1: 0.7, knob2: 0.0, knob3: 0.6, button1: true, button2: true })
               }
             }
             onRelease:
