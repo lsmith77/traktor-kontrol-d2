@@ -8,7 +8,7 @@ This repository contains a fully-featured D2 customization with Serato-inspired 
 
 ## What This Does
 
-Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_S8Style.qml` with five coordinated patches:
+Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_S8Style.qml` with several coordinated patches:
 
 ### Patch 01: Stem Mute (S5-Style)
 
@@ -34,7 +34,7 @@ Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_
 - First press: freeze locked, button lights up
 - Second press: freeze released, button goes dark
 - Pressing any stem FX pad cancels the freeze instantly
-- **Configurable scope**: Works in stem mode by default; set `sfxCaptureFreezeOnlyInStemMode = false` to enable on all decks
+- **Configurable scope**: Works in stem mode by default; set `sfxCaptureFreezeOnlyInStemMode = false` to enable on all deck types
 - Requires Patch 02 (Serato-Style Stem FX)
 
 ### Patch 05: Duplicate Deck
@@ -44,8 +44,22 @@ Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_
 - If source was playing, target auto-plays at the same position for instant in-sync layering
 - Edit button LED is bright while the opposing deck is playing, dim when idle
 - Second press (while opposing deck is playing): stops the opposing deck instead of duplicating
-- **Configurable scope**: Works in stem mode by default; set `duplicateDeckOnlyInStemMode = false` to enable on all decks
+- **Configurable scope**: Works in stem mode by default; set `duplicateDeckOnlyInStemMode = false` to enable on all deck types
 - Requires Patch 02 (Serato-Style Stem FX) — provides `sfxStem*Muted`, `stemMode`, and the outer WiresGroup
+
+### Patch 06: Stem Super Separation
+
+- Shift + FX knob 1 or 4: vocal/instrumental crossfader on the focused deck
+- Shift + FX knob 2 or 3: same on the sibling deck (A↔C or B↔D partner)
+- **Turn left**: fades out vocal (stem 4) — isolates instrumental
+- **Turn right**: fades out instrumental (stems 1–3) — isolates vocal
+- Center position (0.5) = all stems at 100%
+- **Per-stem soft-takeover**: each stem only responds once the knob reaches its current volume (no sudden jumps when stems are below 100% or knob is off-center)
+- Knobs 1 and 2: **latch** — volumes stay when shift is released
+- Knobs 4 and 3: **restore** — configurable via `sssRestoreMode`: `"snapshot"` (default, revert to pre-shift volumes) or `"fader"` (leave as-is)
+- **StemSuperSeparationMode**: Shift+Flux enters a persistent mode; FX knobs perform SSS without holding shift; FLUX LED pulsates; Shift+Flux exits and applies latch/restore
+- **Configurable scope**: Stem decks only by default; set `sssOnlyInStemMode = false` to enable on all deck types
+- See [D2_stem-super-separation.md](D2_stem-super-separation.md) for full details
 
 ---
 
