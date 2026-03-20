@@ -3004,12 +3004,17 @@ Module
 
       WiresGroup
       {
-        enabled: (sfxCaptureFreezeOnlyInStemMode ? (padsMode.value == stemMode && !module.shift) : !module.shift)
+        // Keep enabled while any serato FX pad is held so that pressing shift mid-hold does not
+        // disable the WiresGroup before onRelease fires (which would leave FX units in active state).
+        enabled: (sfxCaptureFreezeOnlyInStemMode
+          ? (padsMode.value == stemMode && (!module.shift || sfxPad5Held || sfxPad6Held || sfxPad7Held || sfxPad8Held))
+          : (!module.shift || sfxPad5Held || sfxPad6Held || sfxPad7Held || sfxPad8Held))
 
         // Pad 5: Drums Delay (Delay+Freeze, single mode, FX unit sfxDelayUnit)
         //   Press (unmuted): Route stem 1 through Delay+Freeze; mute applied on release.
         //   Press (muted):   Unmute stem 1 immediately; no FX.
         //   Release:         If FX was active, mute stem 1 and tear down FX state.
+        //   Shift+release:   Tear down FX state without muting stem 1.
         Wire
         {
           from: "%surface%.pads.5"
@@ -3030,7 +3035,7 @@ Module
             }
             onRelease:
             {
-              if (sfxPad5Held) { sfxStem1Muted.value = true }
+              if (sfxPad5Held && !module.shift) { sfxStem1Muted.value = true }
               sfxPad5Held = false
               sfxTeardown()
             }
@@ -3041,6 +3046,7 @@ Module
         //   Press (not all muted): Route stems 1+2+3 through Turntable FX (BRK); mute applied on release.
         //   Press (all muted):     Unmute stems 1+2+3 immediately; no FX.
         //   Release:               If FX was active, mute stems 1+2+3 and tear down FX state.
+        //   Shift+release:         Tear down FX state without muting stems 1+2+3.
         //   knob3 = B.SPD (brake speed) at 0.55 ≈ 2-4 beats; 0.3 = classic 1-2 bar vinyl stop.
         //   Short hold → brief pitch-down + mute on release; long hold → more of the brake cycle heard.
         Wire
@@ -3066,7 +3072,7 @@ Module
             }
             onRelease:
             {
-              if (sfxPad6Held) { sfxStem1Muted.value = true; sfxStem2Muted.value = true; sfxStem3Muted.value = true }
+              if (sfxPad6Held && !module.shift) { sfxStem1Muted.value = true; sfxStem2Muted.value = true; sfxStem3Muted.value = true }
               sfxPad6Held = false
               sfxTeardown()
             }
@@ -3077,6 +3083,7 @@ Module
         //   Press (not all muted): Route stems 1+2+3 through Delay+Freeze; mute applied on release.
         //   Press (all muted):     Unmute stems 1+2+3 immediately; no FX.
         //   Release:               If FX was active, mute stems 1+2+3 and tear down FX state.
+        //   Shift+release:         Tear down FX state without muting stems 1+2+3.
         Wire
         {
           from: "%surface%.pads.7"
@@ -3100,7 +3107,7 @@ Module
             }
             onRelease:
             {
-              if (sfxPad7Held) { sfxStem1Muted.value = true; sfxStem2Muted.value = true; sfxStem3Muted.value = true }
+              if (sfxPad7Held && !module.shift) { sfxStem1Muted.value = true; sfxStem2Muted.value = true; sfxStem3Muted.value = true }
               sfxPad7Held = false
               sfxTeardown()
             }
@@ -3111,6 +3118,7 @@ Module
         //   Press (unmuted): Route stem 4 through Delay+Freeze; mute applied on release.
         //   Press (muted):   Unmute stem 4 immediately; no FX.
         //   Release:         If FX was active, mute stem 4 and tear down FX state.
+        //   Shift+release:   Tear down FX state without muting stem 4.
         Wire
         {
           from: "%surface%.pads.8"
@@ -3131,7 +3139,7 @@ Module
             }
             onRelease:
             {
-              if (sfxPad8Held) { sfxStem4Muted.value = true }
+              if (sfxPad8Held && !module.shift) { sfxStem4Muted.value = true }
               sfxPad8Held = false
               sfxTeardown()
             }

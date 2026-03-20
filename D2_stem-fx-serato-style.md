@@ -26,6 +26,7 @@ Both units are initialized once when entering stem mode and reset when hitting t
   - Pad 7: Stems 1+2+3 (Drums, Bass, Melody)
   - Pad 8: Stem 4 only (Vocals)
 - **Hold-to-Apply Semantics:** Press retains unmuted stems, mute is applied on release; FX teardown resets state.
+- **Shift+Release Escape:** Press shift while holding a pad, then release — FX tears down but stems are not muted.
 
 ## Modified Files
 
@@ -86,6 +87,7 @@ Pressing the Remix button while in stem mode calls `sfxShutdown()` then `sfxInit
 - **Press (stem 1 unmuted):** Routes stem 1 through Delay+Freeze on FX unit `sfxDelayUnit`
 - **Press (stem 1 muted):** Unmutes stem 1; no FX
 - **Release:** Mutes stem 1, tears down FX state
+- **Shift+release:** Tears down FX state; stem 1 stays unmuted
 
 ---
 
@@ -94,6 +96,7 @@ Pressing the Remix button while in stem mode calls `sfxShutdown()` then `sfxInit
 - **Press (stems 1+2+3 unmuted):** Routes stems 1, 2, 3 through Turntable FX on FX unit `sfxTurntableUnit`; B.SPD ≈ 0.55
 - **Press (all three muted):** Unmutes stems 1, 2, 3; no FX
 - **Release:** Mutes stems 1, 2, 3, tears down FX state
+- **Shift+release:** Tears down FX state; stems 1, 2, 3 stay unmuted
 
 ---
 
@@ -101,11 +104,15 @@ Pressing the Remix button while in stem mode calls `sfxShutdown()` then `sfxInit
 
 Same as Pad 5, routes stems 1+2+3 (all but vocals).
 
+- **Shift+release:** Tears down FX state; stems 1, 2, 3 stay unmuted
+
 ---
 
 ### Pad 8: Vocal Delay (Delay+Freeze, Stem 4 only)
 
 Same as Pad 5, routes stem 4 only.
+
+- **Shift+release:** Tears down FX state; stem 4 stays unmuted
 
 ---
 
@@ -121,15 +128,28 @@ Same as Pad 5, routes stem 4 only.
 
 ## Testing Checklist
 
+**Hold-to-apply (existing behaviour)**
 - [ ] Load a stem track and activate stem mode (Remix button)
-- [ ] Pad 5: Stem 1 audible with Delay+Freeze
-- [ ] Pad 6: Stems 1+2+3 audible with Turntable FX (BRK brake)
-- [ ] Pad 7: Stems 1+2+3 audible with Delay+Freeze
-- [ ] Pad 8: Stem 4 audible with Delay+Freeze
-- [ ] Release pads: Stems mute immediately; FX state resets
+- [ ] Pad 5: Stem 1 audible with Delay+Freeze; mutes on release
+- [ ] Pad 6: Stems 1+2+3 audible with Turntable FX (BRK brake); mutes on release
+- [ ] Pad 7: Stems 1+2+3 audible with Delay+Freeze; mutes on release
+- [ ] Pad 8: Stem 4 audible with Delay+Freeze; mutes on release
 - [ ] Remix button in stem mode: FX units fully reinitialize
 - [ ] Rapid pad presses: No stutter or double-triggering
 - [ ] Test on all four decks
+
+**Shift+release escape (new behaviour)**
+- [ ] Hold pad 5 → press shift → release pad: FX stops, stem 1 stays unmuted
+- [ ] Hold pad 6 → press shift → release pad: FX stops, stems 1+2+3 stay unmuted
+- [ ] Hold pad 7 → press shift → release pad: FX stops, stems 1+2+3 stay unmuted
+- [ ] Hold pad 8 → press shift → release pad: FX stops, stem 4 stays unmuted
+- [ ] After shift+release: subsequent pad press behaves normally (normal mute on release)
+
+**Filter toggle conflict (verify no spurious toggle)**
+- [ ] Hold pad 5 → press shift → release pad: stem 1 filter state unchanged
+- [ ] Hold pad 6 → press shift → release pad: stem 2 filter state unchanged
+- [ ] Hold pad 7 → press shift → release pad: stem 3 filter state unchanged
+- [ ] Hold pad 8 → press shift → release pad: stem 4 filter state unchanged
 
 ---
 
