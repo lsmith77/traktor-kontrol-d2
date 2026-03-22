@@ -749,16 +749,22 @@ Module
   //------------------------------------------------------------------------------------------------------------------
   //  STEM SUPER SEPARATION (SSS)
   //  Shift + FX knob: vocal/instrumental crossfader with per-stem soft-takeover.
+  //  Shift+Flux toggles StemSuperSeparationMode (persistent; FLUX LED pulsates while active).
   //
-  //  Knob 1: focused deck, latch   (volumes stay on shift release)
-  //  Knob 4: focused deck, restore (volumes return to pre-engagement state on shift release)
-  //  Knob 2: sibling deck, latch
-  //  Knob 3: sibling deck, restore
+  //  Knob 1: focused deck only       — standard formula
+  //  Knob 2: sibling deck only       — standard formula
+  //  Knob 3: other-side deck only    — reversed formula
+  //  Knob 4: all 4 decks             — focused: standard; sibling/other-side/other-sib: reversed
   //
-  //  Crossfader formula — center (0.5) = all stems at 100%:
-  //    Instrumental (stems 1-3): min(1.0, (1-knob) × 2)  →  100% at center, 0% at full right
-  //    Vocal (stem 4):           min(1.0, knob × 2)       →  100% at center, 0% at full left
+  //  Standard formula — center (0.5) = all stems at 100%:
+  //    Instrumental (stems 1-3): min(1.0, knob × 2)       →  100% at center, 0% at full left
+  //    Vocal (stem 4):           min(1.0, (1-knob) × 2)   →  100% at center, 0% at full right
   //
+  //  Reversed formula (knob 3 and secondary decks in knob 4): mirror of the above.
+  //    Instrumental (stems 1-3): min(1.0, (1-knob) × 2)   →  100% at center, 0% at full right
+  //    Vocal (stem 4):           min(1.0, knob × 2)        →  100% at center, 0% at full left
+  //
+  //  Restore behavior on shift release / mode exit is governed by sssRestoreMode (see below).
   //  Soft-takeover per stem: each stem only responds once the knob reaches its current volume
   //  level from above (no sudden jumps). The first Wire callback after shift press is skipped
   //  to avoid a jump when the knob is displaced from center.
@@ -767,10 +773,13 @@ Module
   // Config: restrict SSS to Stem decks only (true) or allow on any deck type (false).
   property bool sssOnlyInStemMode: true
 
-  // Config: restore behavior for restore-mode knobs (3 = sibling, 4 = focused) on shift release
-  // or on StemSuperSeparationMode exit.
-  //   "snapshot": revert stems to the volumes captured at shift press / mode entry (default).
-  //   "fader":    leave stems at their current positions (volumes stay as SSS set them).
+  // Config: restore behavior for all four knobs on shift release / StemSuperSeparationMode exit.
+  //   "snapshot": restore all modified deck(s) to pre-engagement volumes (default).
+  //   "fader":    restore secondary deck(s) only; focused deck latches (keeps SSS position).
+  //               For knob 1 (focused only): no secondary → same as "latch".
+  //               For knobs 2 and 3 (single secondary): secondary restored → same as "snapshot".
+  //               For knob 4 (all 4 decks): sibling, other-side, other-sib restored; focused latches.
+  //   "latch":    all modified decks latch — no restoration at all.
   property string sssRestoreMode: "snapshot"
 
   // StemSuperSeparationMode: persistent mode toggled by Shift+Flux.
@@ -780,6 +789,22 @@ Module
 
   // Sibling deck: the other deck in this controller's pair (A↔C or B↔D).
   readonly property int sssSiblingDeckId: footerFocusedDeckId == topDeckId ? bottomDeckId : topDeckId
+
+  // Other-side deck: the deck at the same position on the opposing controller pair.
+  //   AC controller focused on A (top) → B (top of BD);  focused on C (bottom) → D (bottom of BD).
+  //   BD controller focused on B (top) → A (top of AC);  focused on D (bottom) → C (bottom of AC).
+  readonly property int sssOtherSideDeckId:
+    decksAssignment == DecksAssignment.AC ?
+      (footerFocusedDeckId == topDeckId ? 2 : 4) :
+      (footerFocusedDeckId == topDeckId ? 1 : 3)
+
+  // Other-sib deck: the sibling of the other-side deck (the 4th deck not covered by the above three).
+  //   AC focused on A(1) → D(4);  AC focused on C(3) → B(2).
+  //   BD focused on B(2) → C(3);  BD focused on D(4) → A(1).
+  readonly property int sssOtherSibDeckId:
+    decksAssignment == DecksAssignment.AC ?
+      (footerFocusedDeckId == topDeckId ? 4 : 2) :
+      (footerFocusedDeckId == topDeckId ? 3 : 1)
 
   // Enable conditions (auto-update when deck type changes).
   readonly property bool sssFocusedEnabled: !sssOnlyInStemMode || (
@@ -794,49 +819,79 @@ Module
     sssSiblingDeckId == 3 ? deckCType == DeckType.Stem :
     deckDType == DeckType.Stem)
 
+  readonly property bool sssOtherSideEnabled: !sssOnlyInStemMode || (
+    sssOtherSideDeckId == 1 ? deckAType == DeckType.Stem :
+    sssOtherSideDeckId == 2 ? deckBType == DeckType.Stem :
+    sssOtherSideDeckId == 3 ? deckCType == DeckType.Stem :
+    deckDType == DeckType.Stem)
+
   // Knob-active flags: set on first movement after shift press, cleared on shift release.
-  property bool sssKnob1Active: false   // focused deck, latch
-  property bool sssKnob4Active: false   // focused deck, restore
-  property bool sssKnob2Active: false   // sibling deck, latch
-  property bool sssKnob3Active: false   // sibling deck, restore
+  property bool sssKnob1Active: false   // focused deck only (standard formula), sssRestoreMode applies
+  property bool sssKnob2Active: false   // sibling deck only (standard formula), sssRestoreMode applies
+  property bool sssKnob3Active: false   // other-side deck only (reversed formula), sssRestoreMode applies
+  property bool sssKnob4Active: false   // all 4 decks (focused standard + others reversed), sssRestoreMode applies
 
   // JustEngaged flags: absorb the first Wire callback after shift press so a displaced knob
   // position doesn't immediately jump stem volumes. Reset to true on shift press.
   property bool sssKnob1JustEngaged: false
-  property bool sssKnob4JustEngaged: false
   property bool sssKnob2JustEngaged: false
   property bool sssKnob3JustEngaged: false
+  property bool sssKnob4JustEngaged: false
 
-  // Pre-engagement volumes captured at shift press (used by restore-mode knobs 3 and 4).
-  property real sssPreVol1: 1.0    // focused deck stem 1 (drums)
-  property real sssPreVol2: 1.0    // focused deck stem 2 (bass)
-  property real sssPreVol3: 1.0    // focused deck stem 3 (other)
-  property real sssPreVol4: 1.0    // focused deck stem 4 (vocal)
-  property real sssSibPreVol1: 1.0 // sibling deck stem 1
-  property real sssSibPreVol2: 1.0 // sibling deck stem 2
-  property real sssSibPreVol3: 1.0 // sibling deck stem 3
-  property real sssSibPreVol4: 1.0 // sibling deck stem 4
+  // Pre-engagement volumes captured at shift press (used when sssRestoreMode="snapshot" or "fader").
+  property real sssPreVol1: 1.0          // focused deck stem 1 (drums)
+  property real sssPreVol2: 1.0          // focused deck stem 2 (bass)
+  property real sssPreVol3: 1.0          // focused deck stem 3 (other)
+  property real sssPreVol4: 1.0          // focused deck stem 4 (vocal)
+  property real sssSibPreVol1: 1.0       // sibling deck stem 1
+  property real sssSibPreVol2: 1.0       // sibling deck stem 2
+  property real sssSibPreVol3: 1.0       // sibling deck stem 3
+  property real sssSibPreVol4: 1.0       // sibling deck stem 4
+  property real sssOtherPreVol1: 1.0     // other-side deck stem 1
+  property real sssOtherPreVol2: 1.0     // other-side deck stem 2
+  property real sssOtherPreVol3: 1.0     // other-side deck stem 3
+  property real sssOtherPreVol4: 1.0     // other-side deck stem 4
+  property real sssOtherSibPreVol1: 1.0  // other-sib deck stem 1
+  property real sssOtherSibPreVol2: 1.0  // other-sib deck stem 2
+  property real sssOtherSibPreVol3: 1.0  // other-sib deck stem 3
+  property real sssOtherSibPreVol4: 1.0  // other-sib deck stem 4
 
   // Per-stem soft-takeover caught state: reset at shift press; set when the crossfader target
   // first reaches or drops below the stem's current volume (prevents jumps).
-  property bool sssCaught1: false    // focused deck stem 1
-  property bool sssCaught2: false    // focused deck stem 2
-  property bool sssCaught3: false    // focused deck stem 3
-  property bool sssCaught4: false    // focused deck stem 4
-  property bool sssSibCaught1: false // sibling deck stem 1
-  property bool sssSibCaught2: false // sibling deck stem 2
-  property bool sssSibCaught3: false // sibling deck stem 3
-  property bool sssSibCaught4: false // sibling deck stem 4
+  property bool sssCaught1: false         // focused deck stem 1
+  property bool sssCaught2: false         // focused deck stem 2
+  property bool sssCaught3: false         // focused deck stem 3
+  property bool sssCaught4: false         // focused deck stem 4
+  property bool sssSibCaught1: false      // sibling deck stem 1
+  property bool sssSibCaught2: false      // sibling deck stem 2
+  property bool sssSibCaught3: false      // sibling deck stem 3
+  property bool sssSibCaught4: false      // sibling deck stem 4
+  property bool sssOtherCaught1: false    // other-side deck stem 1
+  property bool sssOtherCaught2: false    // other-side deck stem 2
+  property bool sssOtherCaught3: false    // other-side deck stem 3
+  property bool sssOtherCaught4: false    // other-side deck stem 4
+  property bool sssOtherSibCaught1: false // other-sib deck stem 1
+  property bool sssOtherSibCaught2: false // other-sib deck stem 2
+  property bool sssOtherSibCaught3: false // other-sib deck stem 3
+  property bool sssOtherSibCaught4: false // other-sib deck stem 4
 
-  // Stem volume AppProperties — paths update automatically when focused/sibling deck IDs change.
-  AppProperty { id: sssVol1;    path: "app.traktor.decks." + footerFocusedDeckId + ".stems.1.volume" }
-  AppProperty { id: sssVol2;    path: "app.traktor.decks." + footerFocusedDeckId + ".stems.2.volume" }
-  AppProperty { id: sssVol3;    path: "app.traktor.decks." + footerFocusedDeckId + ".stems.3.volume" }
-  AppProperty { id: sssVol4;    path: "app.traktor.decks." + footerFocusedDeckId + ".stems.4.volume" }
-  AppProperty { id: sssSibVol1; path: "app.traktor.decks." + sssSiblingDeckId + ".stems.1.volume" }
-  AppProperty { id: sssSibVol2; path: "app.traktor.decks." + sssSiblingDeckId + ".stems.2.volume" }
-  AppProperty { id: sssSibVol3; path: "app.traktor.decks." + sssSiblingDeckId + ".stems.3.volume" }
-  AppProperty { id: sssSibVol4; path: "app.traktor.decks." + sssSiblingDeckId + ".stems.4.volume" }
+  // Stem volume AppProperties — paths update automatically when deck IDs change.
+  AppProperty { id: sssVol1;         path: "app.traktor.decks." + footerFocusedDeckId + ".stems.1.volume" }
+  AppProperty { id: sssVol2;         path: "app.traktor.decks." + footerFocusedDeckId + ".stems.2.volume" }
+  AppProperty { id: sssVol3;         path: "app.traktor.decks." + footerFocusedDeckId + ".stems.3.volume" }
+  AppProperty { id: sssVol4;         path: "app.traktor.decks." + footerFocusedDeckId + ".stems.4.volume" }
+  AppProperty { id: sssSibVol1;      path: "app.traktor.decks." + sssSiblingDeckId    + ".stems.1.volume" }
+  AppProperty { id: sssSibVol2;      path: "app.traktor.decks." + sssSiblingDeckId    + ".stems.2.volume" }
+  AppProperty { id: sssSibVol3;      path: "app.traktor.decks." + sssSiblingDeckId    + ".stems.3.volume" }
+  AppProperty { id: sssSibVol4;      path: "app.traktor.decks." + sssSiblingDeckId    + ".stems.4.volume" }
+  AppProperty { id: sssOtherVol1;    path: "app.traktor.decks." + sssOtherSideDeckId  + ".stems.1.volume" }
+  AppProperty { id: sssOtherVol2;    path: "app.traktor.decks." + sssOtherSideDeckId  + ".stems.2.volume" }
+  AppProperty { id: sssOtherVol3;    path: "app.traktor.decks." + sssOtherSideDeckId  + ".stems.3.volume" }
+  AppProperty { id: sssOtherVol4;    path: "app.traktor.decks." + sssOtherSideDeckId  + ".stems.4.volume" }
+  AppProperty { id: sssOtherSibVol1; path: "app.traktor.decks." + sssOtherSibDeckId   + ".stems.1.volume" }
+  AppProperty { id: sssOtherSibVol2; path: "app.traktor.decks." + sssOtherSibDeckId   + ".stems.2.volume" }
+  AppProperty { id: sssOtherSibVol3; path: "app.traktor.decks." + sssOtherSibDeckId   + ".stems.3.volume" }
+  AppProperty { id: sssOtherSibVol4; path: "app.traktor.decks." + sssOtherSibDeckId   + ".stems.4.volume" }
 
   // Captured knob values: populated by WiresGroups when shift is active.
   MappingPropertyDescriptor
@@ -856,7 +911,7 @@ Module
       if (!module.shift && !sssModeActive) return
       if (sssKnob2JustEngaged) { sssKnob2JustEngaged = false; return }
       if (!sssKnob2Active) sssKnob2Active = true
-      sssApplySibling(value)
+      sssApplySiblingOnly(value)
     }
   }
   MappingPropertyDescriptor
@@ -866,7 +921,7 @@ Module
       if (!module.shift && !sssModeActive) return
       if (sssKnob3JustEngaged) { sssKnob3JustEngaged = false; return }
       if (!sssKnob3Active) sssKnob3Active = true
-      sssApplySibling(value)
+      sssApplyOtherSideOnly(value)
     }
   }
   MappingPropertyDescriptor
@@ -876,41 +931,89 @@ Module
       if (!module.shift && !sssModeActive) return
       if (sssKnob4JustEngaged) { sssKnob4JustEngaged = false; return }
       if (!sssKnob4Active) sssKnob4Active = true
-      sssApplyFocused(value)
+      sssApplyAll(value)
     }
   }
 
   // Snapshot pre-engagement volumes and reset all per-stem state on shift press.
   function sssOnShiftPressed() {
-    sssPreVol1 = sssVol1.value;    sssPreVol2 = sssVol2.value
-    sssPreVol3 = sssVol3.value;    sssPreVol4 = sssVol4.value
-    sssSibPreVol1 = sssSibVol1.value; sssSibPreVol2 = sssSibVol2.value
-    sssSibPreVol3 = sssSibVol3.value; sssSibPreVol4 = sssSibVol4.value
+    sssPreVol1 = sssVol1.value;                       sssPreVol2 = sssVol2.value
+    sssPreVol3 = sssVol3.value;                       sssPreVol4 = sssVol4.value
+    sssSibPreVol1 = sssSibVol1.value;                 sssSibPreVol2 = sssSibVol2.value
+    sssSibPreVol3 = sssSibVol3.value;                 sssSibPreVol4 = sssSibVol4.value
+    sssOtherPreVol1 = sssOtherVol1.value;             sssOtherPreVol2 = sssOtherVol2.value
+    sssOtherPreVol3 = sssOtherVol3.value;             sssOtherPreVol4 = sssOtherVol4.value
+    sssOtherSibPreVol1 = sssOtherSibVol1.value;       sssOtherSibPreVol2 = sssOtherSibVol2.value
+    sssOtherSibPreVol3 = sssOtherSibVol3.value;       sssOtherSibPreVol4 = sssOtherSibVol4.value
     sssCaught1 = false; sssCaught2 = false; sssCaught3 = false; sssCaught4 = false
     sssSibCaught1 = false; sssSibCaught2 = false; sssSibCaught3 = false; sssSibCaught4 = false
-    sssKnob1Active = false; sssKnob4Active = false
-    sssKnob2Active = false; sssKnob3Active = false
-    sssKnob1JustEngaged = true; sssKnob4JustEngaged = true
-    sssKnob2JustEngaged = true; sssKnob3JustEngaged = true
+    sssOtherCaught1 = false; sssOtherCaught2 = false; sssOtherCaught3 = false; sssOtherCaught4 = false
+    sssOtherSibCaught1 = false; sssOtherSibCaught2 = false; sssOtherSibCaught3 = false; sssOtherSibCaught4 = false
+    sssKnob1Active = false; sssKnob2Active = false; sssKnob3Active = false; sssKnob4Active = false
+    sssKnob1JustEngaged = true; sssKnob2JustEngaged = true; sssKnob3JustEngaged = true; sssKnob4JustEngaged = true
   }
 
-  // On shift release (or SSS mode exit): apply restore or fader behavior for restore-mode knobs.
-  //   sssRestoreMode "snapshot": revert focused (knob4) and sibling (knob3) decks to pre-engagement volumes.
-  //   sssRestoreMode "fader":    leave stem volumes as-is (current fader/SSS state is kept).
+  // On shift release (or SSS mode exit): apply restore or latch behavior per sssRestoreMode.
+  //
+  //  Knob 1 (focused only, standard):
+  //    "snapshot": restore focused.
+  //    "fader"/"latch": focused latches — no-op. (No secondary was touched.)
+  //  Knob 2 (sibling only, standard):
+  //    "snapshot"/"fader": restore sibling. (Sibling is the only affected deck; fader=snapshot here.)
+  //    "latch": no-op.
+  //  Knob 3 (other-side only, reversed):
+  //    "snapshot"/"fader": restore other-side. (Other-side is the only affected deck; fader=snapshot here.)
+  //    "latch": no-op.
+  //  Knob 4 (all 4 decks, focused standard + others reversed):
+  //    "snapshot": restore all 4 decks.
+  //    "fader":    restore sibling, other-side, and other-sib only; focused deck latches.
+  //    "latch":    all 4 decks latch — no-op.
   function sssOnShiftReleased() {
-    if (sssRestoreMode === "snapshot") {
-      if (sssKnob4Active) {
+    // Knob 1: focused deck only.
+    if (sssKnob1Active) {
+      if (sssRestoreMode === "snapshot") {
         sssVol1.value = sssPreVol1; sssVol2.value = sssPreVol2
         sssVol3.value = sssPreVol3; sssVol4.value = sssPreVol4
       }
-      if (sssKnob3Active) {
+      // "fader"/"latch": no secondary to restore; focused latches — no-op
+    }
+    // Knob 2: sibling deck only. "fader" = "snapshot" (sibling is already secondary).
+    if (sssKnob2Active) {
+      if (sssRestoreMode !== "latch") {
         sssSibVol1.value = sssSibPreVol1; sssSibVol2.value = sssSibPreVol2
         sssSibVol3.value = sssSibPreVol3; sssSibVol4.value = sssSibPreVol4
       }
     }
-    // sssRestoreMode "fader": volumes stay exactly where SSS (or the hardware faders) left them.
-    sssKnob1Active = false; sssKnob4Active = false
-    sssKnob2Active = false; sssKnob3Active = false
+    // Knob 3: other-side deck only. "fader" = "snapshot" (other-side is already secondary).
+    if (sssKnob3Active) {
+      if (sssRestoreMode !== "latch") {
+        sssOtherVol1.value = sssOtherPreVol1; sssOtherVol2.value = sssOtherPreVol2
+        sssOtherVol3.value = sssOtherPreVol3; sssOtherVol4.value = sssOtherPreVol4
+      }
+    }
+    // Knob 4: all 4 decks.
+    if (sssKnob4Active) {
+      if (sssRestoreMode === "snapshot") {
+        sssVol1.value = sssPreVol1;                   sssVol2.value = sssPreVol2
+        sssVol3.value = sssPreVol3;                   sssVol4.value = sssPreVol4
+        sssSibVol1.value = sssSibPreVol1;             sssSibVol2.value = sssSibPreVol2
+        sssSibVol3.value = sssSibPreVol3;             sssSibVol4.value = sssSibPreVol4
+        sssOtherVol1.value = sssOtherPreVol1;         sssOtherVol2.value = sssOtherPreVol2
+        sssOtherVol3.value = sssOtherPreVol3;         sssOtherVol4.value = sssOtherPreVol4
+        sssOtherSibVol1.value = sssOtherSibPreVol1;   sssOtherSibVol2.value = sssOtherSibPreVol2
+        sssOtherSibVol3.value = sssOtherSibPreVol3;   sssOtherSibVol4.value = sssOtherSibPreVol4
+      } else if (sssRestoreMode === "fader") {
+        // Restore the three secondary decks; focused deck latches.
+        sssSibVol1.value = sssSibPreVol1;             sssSibVol2.value = sssSibPreVol2
+        sssSibVol3.value = sssSibPreVol3;             sssSibVol4.value = sssSibPreVol4
+        sssOtherVol1.value = sssOtherPreVol1;         sssOtherVol2.value = sssOtherPreVol2
+        sssOtherVol3.value = sssOtherPreVol3;         sssOtherVol4.value = sssOtherPreVol4
+        sssOtherSibVol1.value = sssOtherSibPreVol1;   sssOtherSibVol2.value = sssOtherSibPreVol2
+        sssOtherSibVol3.value = sssOtherSibPreVol3;   sssOtherSibVol4.value = sssOtherSibPreVol4
+      }
+      // "latch": nothing
+    }
+    sssKnob1Active = false; sssKnob2Active = false; sssKnob3Active = false; sssKnob4Active = false
   }
 
   // Enter StemSuperSeparationMode: snapshot volumes and arm knobs identically to a shift press.
@@ -919,12 +1022,17 @@ Module
   // Exit StemSuperSeparationMode: apply the configured latch/restore behavior.
   function sssOnExitMode() { sssOnShiftReleased() }
 
-  // Crossfader applied to focused deck (knobs 1 and 4).
-  // Instrumental target = min(1, (1-knob)×2): 100% at center, fades to 0% at full right.
-  // Vocal target        = min(1, knob×2):       100% at center, fades to 0% at full left.
+  // Single-deck crossfade: focused deck only, standard formula (knob 1).
+  //
+  //  Center (0.5) = all stems at 100%.
+  //  Full left  (0.0): vocal MAX, inst MIN  (isolate vocal).
+  //  Full right (1.0): inst MAX, vocal MIN  (isolate inst).
+  //
+  //  inst = min(1, knob×2)       vocal = min(1, (1−knob)×2)
   function sssApplyFocused(knobPos) {
-    var inst = Math.min(1.0, (1.0 - knobPos) * 2.0)
-    var voc  = Math.min(1.0, knobPos * 2.0)
+    var inst = Math.min(1.0, knobPos * 2.0)           // focused inst target
+    var voc  = Math.min(1.0, (1.0 - knobPos) * 2.0)  // focused vocal target
+    // Focused deck: stems 1–3 = inst, stem 4 = voc
     if (!sssCaught1) { if (inst <= sssVol1.value) sssCaught1 = true }
     if  (sssCaught1) sssVol1.value = inst
     if (!sssCaught2) { if (inst <= sssVol2.value) sssCaught2 = true }
@@ -935,10 +1043,12 @@ Module
     if  (sssCaught4) sssVol4.value = voc
   }
 
-  // Crossfader applied to sibling deck (knobs 2 and 3).
-  function sssApplySibling(knobPos) {
-    var inst = Math.min(1.0, (1.0 - knobPos) * 2.0)
-    var voc  = Math.min(1.0, knobPos * 2.0)
+  // Single-deck crossfade: sibling deck only, standard formula (knob 2).
+  // Same direction as knob 1 — left isolates vocal, right isolates inst — but on sibling.
+  function sssApplySiblingOnly(knobPos) {
+    var inst = Math.min(1.0, knobPos * 2.0)           // sibling inst target
+    var voc  = Math.min(1.0, (1.0 - knobPos) * 2.0)  // sibling vocal target
+    // Sibling deck: stems 1–3 = inst, stem 4 = voc
     if (!sssSibCaught1) { if (inst <= sssSibVol1.value) sssSibCaught1 = true }
     if  (sssSibCaught1) sssSibVol1.value = inst
     if (!sssSibCaught2) { if (inst <= sssSibVol2.value) sssSibCaught2 = true }
@@ -947,6 +1057,78 @@ Module
     if  (sssSibCaught3) sssSibVol3.value = inst
     if (!sssSibCaught4) { if (voc  <= sssSibVol4.value) sssSibCaught4 = true }
     if  (sssSibCaught4) sssSibVol4.value = voc
+  }
+
+  // Single-deck crossfade: other-side deck only, reversed formula (knob 3).
+  //
+  //  Reversed means the opposite direction to knobs 1 and 2:
+  //  Full left  (0.0): inst MAX, vocal MIN  (isolate inst on other-side).
+  //  Full right (1.0): inst MIN, vocal MAX  (isolate vocal on other-side).
+  //
+  //  inst = min(1, (1−knob)×2)   vocal = min(1, knob×2)
+  function sssApplyOtherSideOnly(knobPos) {
+    var inst = Math.min(1.0, (1.0 - knobPos) * 2.0)  // other-side inst target (reversed)
+    var voc  = Math.min(1.0, knobPos * 2.0)           // other-side vocal target (reversed)
+    // Other-side deck: stems 1–3 = inst, stem 4 = voc
+    if (!sssOtherCaught1) { if (inst <= sssOtherVol1.value) sssOtherCaught1 = true }
+    if  (sssOtherCaught1) sssOtherVol1.value = inst
+    if (!sssOtherCaught2) { if (inst <= sssOtherVol2.value) sssOtherCaught2 = true }
+    if  (sssOtherCaught2) sssOtherVol2.value = inst
+    if (!sssOtherCaught3) { if (inst <= sssOtherVol3.value) sssOtherCaught3 = true }
+    if  (sssOtherCaught3) sssOtherVol3.value = inst
+    if (!sssOtherCaught4) { if (voc  <= sssOtherVol4.value) sssOtherCaught4 = true }
+    if  (sssOtherCaught4) sssOtherVol4.value = voc
+  }
+
+  // Four-deck crossfade: focused (standard) + sibling, other-side, other-sib (all reversed) (knob 4).
+  //
+  //  Full left  (0.0): focused isolates vocal;        sibling/other-side/other-sib isolate inst.
+  //  Full right (1.0): focused isolates inst;         sibling/other-side/other-sib isolate vocal.
+  //  Center (0.5): all stems on all 4 decks at 100%.
+  //
+  //  focInst = min(1, knob×2)        focVoc = min(1, (1−knob)×2)   — standard for focused
+  //  secInst = min(1, (1−knob)×2)    secVoc = min(1, knob×2)       — reversed for secondaries
+  function sssApplyAll(knobPos) {
+    var focInst = Math.min(1.0, knobPos * 2.0)           // focused inst target
+    var focVoc  = Math.min(1.0, (1.0 - knobPos) * 2.0)  // focused vocal target
+    var secInst = focVoc                                  // secondary inst target (reversed = focVoc)
+    var secVoc  = focInst                                 // secondary vocal target (reversed = focInst)
+    // Focused deck (standard): stems 1–3 = focInst, stem 4 = focVoc
+    if (!sssCaught1) { if (focInst <= sssVol1.value) sssCaught1 = true }
+    if  (sssCaught1) sssVol1.value = focInst
+    if (!sssCaught2) { if (focInst <= sssVol2.value) sssCaught2 = true }
+    if  (sssCaught2) sssVol2.value = focInst
+    if (!sssCaught3) { if (focInst <= sssVol3.value) sssCaught3 = true }
+    if  (sssCaught3) sssVol3.value = focInst
+    if (!sssCaught4) { if (focVoc  <= sssVol4.value) sssCaught4 = true }
+    if  (sssCaught4) sssVol4.value = focVoc
+    // Sibling deck (reversed): stems 1–3 = secInst, stem 4 = secVoc
+    if (!sssSibCaught1) { if (secInst <= sssSibVol1.value) sssSibCaught1 = true }
+    if  (sssSibCaught1) sssSibVol1.value = secInst
+    if (!sssSibCaught2) { if (secInst <= sssSibVol2.value) sssSibCaught2 = true }
+    if  (sssSibCaught2) sssSibVol2.value = secInst
+    if (!sssSibCaught3) { if (secInst <= sssSibVol3.value) sssSibCaught3 = true }
+    if  (sssSibCaught3) sssSibVol3.value = secInst
+    if (!sssSibCaught4) { if (secVoc  <= sssSibVol4.value) sssSibCaught4 = true }
+    if  (sssSibCaught4) sssSibVol4.value = secVoc
+    // Other-side deck (reversed): stems 1–3 = secInst, stem 4 = secVoc
+    if (!sssOtherCaught1) { if (secInst <= sssOtherVol1.value) sssOtherCaught1 = true }
+    if  (sssOtherCaught1) sssOtherVol1.value = secInst
+    if (!sssOtherCaught2) { if (secInst <= sssOtherVol2.value) sssOtherCaught2 = true }
+    if  (sssOtherCaught2) sssOtherVol2.value = secInst
+    if (!sssOtherCaught3) { if (secInst <= sssOtherVol3.value) sssOtherCaught3 = true }
+    if  (sssOtherCaught3) sssOtherVol3.value = secInst
+    if (!sssOtherCaught4) { if (secVoc  <= sssOtherVol4.value) sssOtherCaught4 = true }
+    if  (sssOtherCaught4) sssOtherVol4.value = secVoc
+    // Other-sib deck (reversed): stems 1–3 = secInst, stem 4 = secVoc
+    if (!sssOtherSibCaught1) { if (secInst <= sssOtherSibVol1.value) sssOtherSibCaught1 = true }
+    if  (sssOtherSibCaught1) sssOtherSibVol1.value = secInst
+    if (!sssOtherSibCaught2) { if (secInst <= sssOtherSibVol2.value) sssOtherSibCaught2 = true }
+    if  (sssOtherSibCaught2) sssOtherSibVol2.value = secInst
+    if (!sssOtherSibCaught3) { if (secInst <= sssOtherSibVol3.value) sssOtherSibCaught3 = true }
+    if  (sssOtherSibCaught3) sssOtherSibVol3.value = secInst
+    if (!sssOtherSibCaught4) { if (secVoc  <= sssOtherSibVol4.value) sssOtherSibCaught4 = true }
+    if  (sssOtherSibCaught4) sssOtherSibVol4.value = secVoc
   }
 
   // Initialize both FX units when entering stem mode.
@@ -5260,22 +5442,36 @@ Module
   //------------------------------------------------------------------------------------------------------------------
   //  SSS — FX KNOB CAPTURE (shift-active)
   //  Routes surface FX knobs to SSS MappingPropertyDescriptors when shift is held.
-  //  Knobs 1 + 4 → focused deck (latch / restore).   Knobs 2 + 3 → sibling deck (latch / restore).
+  //  Knob 1 → focused only.  Knob 2 → sibling only.  Knob 3 → other-side only.  Knob 4 → all 4 decks.
   //  The FX unit knob wiring above is suspended when shift is active; SSS takes priority.
   //------------------------------------------------------------------------------------------------------------------
 
+  // FX knob 1: focused deck only (standard formula).
   WiresGroup
   {
     enabled: (module.shift || sssModeActive) && sssFocusedEnabled
     Wire { from: "%surface%.fx.knobs.1"; to: DirectPropertyAdapter { path: propertiesPath + ".sss.knob.1" } }
-    Wire { from: "%surface%.fx.knobs.4"; to: DirectPropertyAdapter { path: propertiesPath + ".sss.knob.4" } }
   }
 
+  // FX knob 2: sibling deck only (standard formula).
   WiresGroup
   {
     enabled: (module.shift || sssModeActive) && sssSiblingEnabled
     Wire { from: "%surface%.fx.knobs.2"; to: DirectPropertyAdapter { path: propertiesPath + ".sss.knob.2" } }
+  }
+
+  // FX knob 3: other-side deck only (reversed formula).
+  WiresGroup
+  {
+    enabled: (module.shift || sssModeActive) && sssOtherSideEnabled
     Wire { from: "%surface%.fx.knobs.3"; to: DirectPropertyAdapter { path: propertiesPath + ".sss.knob.3" } }
+  }
+
+  // FX knob 4: all 4 decks (focused standard + sibling/other-side/other-sib reversed).
+  WiresGroup
+  {
+    enabled: (module.shift || sssModeActive) && sssFocusedEnabled
+    Wire { from: "%surface%.fx.knobs.4"; to: DirectPropertyAdapter { path: propertiesPath + ".sss.knob.4" } }
   }
 
   //------------------------------------------------------------------------------------------------------------------

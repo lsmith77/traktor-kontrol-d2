@@ -49,14 +49,15 @@ Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_
 
 ### Patch 06: Stem Super Separation
 
-- Shift + FX knob 1 or 4: vocal/instrumental crossfader on the focused deck
-- Shift + FX knob 2 or 3: same on the sibling deck (A↔C or B↔D partner)
-- **Turn left**: fades out vocal (stem 4) — isolates instrumental
-- **Turn right**: fades out instrumental (stems 1–3) — isolates vocal
-- Center position (0.5) = all stems at 100%
+- **FX knob 1**: vocal/instrumental crossfade on **focused deck only** (standard formula)
+- **FX knob 2**: same on **sibling deck only** (A↔C or B↔D) — independent of focused
+- **FX knob 3**: same on **other-side deck only** (A↔B, C↔D) — **reversed direction**
+- **FX knob 4**: all 4 decks simultaneously — focused uses standard, the other three use reversed
+- **Standard formula** — turn left: isolates vocal; turn right: isolates instrumental
+- **Reversed formula** — turn left: isolates instrumental; turn right: isolates vocal
+- Center position (0.5) = all stems at 100% on all affected decks
 - **Per-stem soft-takeover**: each stem only responds once the knob reaches its current volume (no sudden jumps when stems are below 100% or knob is off-center)
-- Knobs 1 and 2: **latch** — volumes stay when shift is released
-- Knobs 4 and 3: **restore** — configurable via `sssRestoreMode`: `"snapshot"` (default, revert to pre-shift volumes) or `"fader"` (leave as-is)
+- All four knobs follow `sssRestoreMode` on shift release: `"snapshot"` (default), `"fader"`, or `"latch"`
 - **StemSuperSeparationMode**: Shift+Flux enters a persistent mode; FX knobs perform SSS without holding shift; FLUX LED pulsates; Shift+Flux exits and applies latch/restore
 - **Configurable scope**: Stem decks only by default; set `sssOnlyInStemMode = false` to enable on all deck types
 - See [D2_stem-super-separation.md](D2_stem-super-separation.md) for full details

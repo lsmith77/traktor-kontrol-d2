@@ -7,7 +7,7 @@
 
 ## Overview
 
-Shift + FX knob becomes a vocal/instrumental crossfader (superknob) for the current stem track. One knob controls all four stem volumes simultaneously with per-stem soft-takeover.
+Shift + FX knob becomes a vocal/instrumental isolation control for stem tracks. Each of the four knobs operates on a different set of decks, and all four follow the configured restore behavior on shift release.
 
 ---
 
@@ -24,14 +24,18 @@ Shift + FX knob becomes a vocal/instrumental crossfader (superknob) for the curr
 
 ## Knob Assignment
 
-| Knob | Deck | On Shift Release / Mode Exit |
-|------|------|------------------------------|
-| FX knob 1 | Focused deck | **Latch** — volumes stay |
-| FX knob 2 | Sibling deck | **Latch** — volumes stay |
-| FX knob 3 | Sibling deck | **Restore** — see `sssRestoreMode` |
-| FX knob 4 | Focused deck | **Restore** — see `sssRestoreMode` |
+| Knob | Target deck(s) | Formula | On Shift Release / Mode Exit |
+|------|---------------|---------|------------------------------|
+| FX knob 1 | Focused only | Standard | See `sssRestoreMode` |
+| FX knob 2 | Sibling only | Standard | See `sssRestoreMode` |
+| FX knob 3 | Other-side only | Reversed | See `sssRestoreMode` |
+| FX knob 4 | All 4 decks | Focused standard + others reversed | See `sssRestoreMode` |
 
-The sibling deck is the other deck in this controller's pair (A↔C or B↔D).
+**Sibling deck**: the other deck managed by this same controller (A↔C or B↔D).
+
+**Other-side deck**: the deck at the same position on the opposing controller pair — A↔B, C↔D (or B↔A, D↔C).
+
+**Other-sib deck**: the sibling of the other-side deck (the 4th deck). AC focused A→D; AC focused C→B; BD focused B→C; BD focused D→A.
 
 ---
 
@@ -39,24 +43,45 @@ The sibling deck is the other deck in this controller's pair (A↔C or B↔D).
 
 Center (0.5) = all stems at 100%.
 
-| Direction | Effect |
-|-----------|--------|
-| Turn left  | Fades out **vocal** (stem 4) → isolates instrumental |
-| Turn right | Fades out **instrumental** (stems 1–3) → isolates vocal |
+### Standard formula (FX knobs 1 and 2, and the focused deck in FX knob 4)
 
-Volume targets:
-- **Stems 1–3** (drums, bass, other): `min(1.0, (1 − knob) × 2)`
-- **Stem 4** (vocal): `min(1.0, knob × 2)`
+| Direction | Inst (stems 1–3) | Vocal (stem 4) |
+|-----------|-----------------|----------------|
+| Full left (0.0) | MIN | MAX |
+| Center (0.5) | 100% | 100% |
+| Full right (1.0) | MAX | MIN |
+
+`inst = min(1.0, knob×2)`, `voc = min(1.0, (1−knob)×2)`
+
+### Reversed formula (FX knob 3, and all secondary decks in FX knob 4)
+
+The opposite direction: where the standard formula fades out instrumentals, the reversed formula fades out vocals instead.
+
+| Direction | Inst (stems 1–3) | Vocal (stem 4) |
+|-----------|-----------------|----------------|
+| Full left (0.0) | MAX | MIN |
+| Center (0.5) | 100% | 100% |
+| Full right (1.0) | MIN | MAX |
+
+`inst = min(1.0, (1−knob)×2)`, `voc = min(1.0, knob×2)`
+
+### FX knob 4 combined behavior
+
+| Direction | Focused | Sibling / Other-side / Other-sib |
+|-----------|---------|----------------------------------|
+| Full left (0.0) | Vocal isolated | Instrumental isolated |
+| Center (0.5) | All 100% | All 100% |
+| Full right (1.0) | Instrumental isolated | Vocal isolated |
 
 ---
 
 ## Soft-Takeover
 
-Each stem has independent soft-takeover. A stem is only affected once the knob's crossfader target reaches (from above) the stem's current volume. This prevents jumps when stems are below 100% or when the FX knob is not at center when shift is pressed.
+Each stem has independent soft-takeover. A stem is only affected once the knob's target reaches (from above) the stem's current volume. This prevents jumps when stems are below 100% or when the FX knob is not at center when shift is pressed.
 
 **Knob displaced from center at shift press:** The first Wire callback after shift press is absorbed (no volume change), so the user must actively move the knob before anything happens.
 
-**Example:** Drums at 10%, knob at center (0.5). As you turn right, `instTarget = (1−knob)×2` decreases from 1.0. Drums only start moving when `instTarget` reaches 0.1 (at knob ≈ 0.95). Before that, drums stay at 10%.
+**Example:** Drums at 10%, knob at center (0.5). As you turn right (standard formula), `inst = knob×2` increases. Drums are already above 10% at center, so they start moving immediately. But if you turn left, `inst` decreases from 1.0 — drums only start responding once the target drops below 0.1 (at knob ≈ 0.05).
 
 ---
 
@@ -72,15 +97,21 @@ When shift is held, FX unit parameter control (dry_wet / knob 1–3) is suspende
 // Restrict SSS to Stem decks only (true) or allow on any deck type (false).
 property bool sssOnlyInStemMode: true
 
-// Restore behavior for knobs 3 (sibling) and 4 (focused) on shift release or mode exit.
-//   "snapshot": revert stems to volumes captured at shift press / mode entry (default).
-//   "fader":    leave stems at their current positions (volumes stay as SSS set them).
+// Restore behavior for all four knobs on shift release / mode exit.
+//   "snapshot": restore all modified deck(s) to pre-engagement volumes (default).
+//   "fader":    restore secondary deck(s) only; focused deck latches (keeps SSS position).
+//               For knob 1 (focused only): no secondary → same as "latch".
+//               For knobs 2 and 3 (single secondary): secondary is restored → same as "snapshot".
+//               For knob 4 (all 4 decks): sibling, other-side, other-sib restored; focused latches.
+//   "latch":    all modified decks latch — no restoration at all.
 property string sssRestoreMode: "snapshot"
 ```
 
 `sssOnlyInStemMode: false` allows the knobs on any deck type (no audible effect on non-stem tracks, but FX parameters are still suspended while shift is held or SSS mode is active).
 
-`sssRestoreMode: "fader"` makes the restore knobs (3 and 4) behave like latch knobs — the stem volumes stay exactly where SSS or the hardware faders left them when you release shift or exit SSS mode.
+- `"snapshot"` (default): everything reverts to the state at shift press / mode entry.
+- `"fader"`: your focused deck keeps its SSS-adjusted state when using knob 4; secondary decks are cleaned up. For knobs 2 and 3, the single secondary deck is always restored (same as snapshot). For knob 1, no secondary exists so focused latches.
+- `"latch"`: all changes on all decks are kept.
 
 ---
 
@@ -90,7 +121,7 @@ Press **Shift+Flux** to enter a persistent SSS mode. While active:
 
 - FX knobs 1–4 perform the vocal/instrumental crossfade **without holding shift**.
 - The **FLUX button LED pulsates** to indicate the mode is on.
-- All four knobs still follow the latch/restore rules (knobs 1+2 latch; knobs 3+4 respect `sssRestoreMode`).
+- All four knobs follow the configured `sssRestoreMode` on exit.
 
 Press **Shift+Flux again** to exit the mode. The configured latch/restore behavior fires on exit, exactly as it would on a normal shift release.
 
