@@ -58,7 +58,7 @@ Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_
 - Center position (0.5) = all stems at 100% on all affected decks
 - **Per-stem soft-takeover**: each stem only responds once the knob reaches its current volume (no sudden jumps when stems are below 100% or knob is off-center)
 - All four knobs follow `sssRestoreMode` on shift release: `"snapshot"` (default), `"fader"`, or `"latch"`
-- **StemSuperSeparationMode**: Shift+Flux enters a persistent mode; FX knobs perform SSS without holding shift; FLUX LED pulsates; Shift+Flux exits and applies latch/restore
+- **StemSuperSeparationMode**: Shift+Flux enters a persistent mode; FX knobs perform SSS without holding shift; FLUX LED pulsates; Shift+Flux exits and applies latch/restore; Shift + FX knobs temporarily disables StemSuperSeparationMode to be able to pre-position knobs
 - **Configurable scope**: Stem decks only by default; set `sssOnlyInStemMode = false` to enable on all deck types
 - See [D2_stem-super-separation.md](D2_stem-super-separation.md) for full details
 
@@ -245,16 +245,6 @@ These chapters explain the **metadata lock file pattern** (like `package-lock.js
 
 ---
 
-## Support & Questions
-
-- See [DESIGN_PHILOSOPHY.md](DESIGN_PHILOSOPHY.md) for architecture details
-- See [CHANGELOG.md](CHANGELOG.md) for what's planned next
-- Check [config.yaml](config.yaml) for hybrid mode explanation
-- Review [traktor-kontrol-qml](https://github.com/lsmith77/traktor-kontrol-qml) for broader context
-- See [Chapter 09](https://github.com/lsmith77/traktor-kontrol-qml/blob/main/09_MOD_DOCUMENTATION_GUIDE.md) for versioning and metadata lock files
-
----
-
 **Status**: Stable for Traktor 4.4.2  
-**License**: MIT (fork, modify, use freely)  
+**License**: CC0 1.0 Universal
 **Author**: Lukas Kahwe Smith
