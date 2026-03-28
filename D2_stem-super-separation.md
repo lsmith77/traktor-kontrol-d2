@@ -9,6 +9,8 @@
 
 Shift + FX knob becomes a vocal/instrumental isolation control for stem tracks. Each of the four knobs operates on a different set of decks, and all four follow the configured restore behavior on shift release.
 
+**StemSuperSeparationMode (persistent SSS):** Press **Shift+Flux** to toggle a persistent mode where the FX knobs perform the crossfade without holding shift. While active, the FLUX LED pulsates. In this mode, holding shift temporarily suppresses the SSS knobs — useful for pre-positioning a knob to the desired starting value before the separation takes effect. Releasing shift re-engages the knobs with soft-takeover from the new position.
+
 ---
 
 ## Stem Slot Mapping

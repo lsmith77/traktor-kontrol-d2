@@ -898,7 +898,7 @@ Module
   {
     id: sssKnob1Prop; path: propertiesPath + ".sss.knob.1"; type: MappingPropertyDescriptor.Float; value: 0.5
     onValueChanged: {
-      if (!module.shift && !sssModeActive) return
+      if (module.shift === sssModeActive) return
       if (sssKnob1JustEngaged) { sssKnob1JustEngaged = false; return }
       if (!sssKnob1Active) sssKnob1Active = true
       sssApplyFocused(value)
@@ -908,7 +908,7 @@ Module
   {
     id: sssKnob2Prop; path: propertiesPath + ".sss.knob.2"; type: MappingPropertyDescriptor.Float; value: 0.5
     onValueChanged: {
-      if (!module.shift && !sssModeActive) return
+      if (module.shift === sssModeActive) return
       if (sssKnob2JustEngaged) { sssKnob2JustEngaged = false; return }
       if (!sssKnob2Active) sssKnob2Active = true
       sssApplySiblingOnly(value)
@@ -918,7 +918,7 @@ Module
   {
     id: sssKnob3Prop; path: propertiesPath + ".sss.knob.3"; type: MappingPropertyDescriptor.Float; value: 0.5
     onValueChanged: {
-      if (!module.shift && !sssModeActive) return
+      if (module.shift === sssModeActive) return
       if (sssKnob3JustEngaged) { sssKnob3JustEngaged = false; return }
       if (!sssKnob3Active) sssKnob3Active = true
       sssApplyOtherSideOnly(value)
@@ -928,7 +928,7 @@ Module
   {
     id: sssKnob4Prop; path: propertiesPath + ".sss.knob.4"; type: MappingPropertyDescriptor.Float; value: 0.5
     onValueChanged: {
-      if (!module.shift && !sssModeActive) return
+      if (module.shift === sssModeActive) return
       if (sssKnob4JustEngaged) { sssKnob4JustEngaged = false; return }
       if (!sssKnob4Active) sssKnob4Active = true
       sssApplyAll(value)
@@ -1696,7 +1696,15 @@ Module
     path: propertiesPath + ".shift"
     type: MappingPropertyDescriptor.Boolean
     value: false
-    onValueChanged: { if (!sssModeActive) { if (value) { sssOnShiftPressed() } else { sssOnShiftReleased() } } }
+    onValueChanged: {
+      if (!sssModeActive) {
+        if (value) { sssOnShiftPressed() } else { sssOnShiftReleased() }
+      } else {
+        // In SSS mode shift suppresses the knobs (pre-positioning). Re-arm justEngaged on
+        // shift release so the first Wire callback after shift is released is absorbed.
+        if (!value) { sssKnob1JustEngaged = true; sssKnob2JustEngaged = true; sssKnob3JustEngaged = true; sssKnob4JustEngaged = true }
+      }
+    }
   }
   Wire { from: "%surface%.shift";  to: DirectPropertyAdapter { path: propertiesPath + ".shift"  } }
 
@@ -5447,30 +5455,32 @@ Module
   //------------------------------------------------------------------------------------------------------------------
 
   // FX knob 1: focused deck only (standard formula).
+  // Disabled when both shift and SSS mode are active — shift suppresses SSS knobs in persistent mode
+  // so the user can pre-position the knob before the separation takes effect.
   WiresGroup
   {
-    enabled: (module.shift || sssModeActive) && sssFocusedEnabled
+    enabled: (module.shift !== sssModeActive) && sssFocusedEnabled
     Wire { from: "%surface%.fx.knobs.1"; to: DirectPropertyAdapter { path: propertiesPath + ".sss.knob.1" } }
   }
 
   // FX knob 2: sibling deck only (standard formula).
   WiresGroup
   {
-    enabled: (module.shift || sssModeActive) && sssSiblingEnabled
+    enabled: (module.shift !== sssModeActive) && sssSiblingEnabled
     Wire { from: "%surface%.fx.knobs.2"; to: DirectPropertyAdapter { path: propertiesPath + ".sss.knob.2" } }
   }
 
   // FX knob 3: other-side deck only (reversed formula).
   WiresGroup
   {
-    enabled: (module.shift || sssModeActive) && sssOtherSideEnabled
+    enabled: (module.shift !== sssModeActive) && sssOtherSideEnabled
     Wire { from: "%surface%.fx.knobs.3"; to: DirectPropertyAdapter { path: propertiesPath + ".sss.knob.3" } }
   }
 
   // FX knob 4: all 4 decks (focused standard + sibling/other-side/other-sib reversed).
   WiresGroup
   {
-    enabled: (module.shift || sssModeActive) && sssFocusedEnabled
+    enabled: (module.shift !== sssModeActive) && sssFocusedEnabled
     Wire { from: "%surface%.fx.knobs.4"; to: DirectPropertyAdapter { path: propertiesPath + ".sss.knob.4" } }
   }
 
