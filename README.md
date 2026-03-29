@@ -2,7 +2,9 @@
 
 **Production-ready Stem Mode implementation for Traktor Kontrol D2 (4.4.2).**
 
-This repository contains a fully-featured D2 customization with Serato-inspired Stem Mode controls, designed as a working example of the hybrid layering approach documented in the main [traktor-kontrol-qml](https://github.com/lsmith77/traktor-kontrol-qml) ecosystem.
+This repository contains a fully-featured D2 customization with lots of stem specific features, like Serato-inspired Stem Mode controls.
+
+This D2 mod is an example of a **overlay mod** documented in [traktor-kontrol-qml](https://github.com/lsmith77/traktor-kontrol-qml):
 
 ---
 
@@ -17,35 +19,35 @@ Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_
 
 ### Patch 02: Serato-Style Stem FX
 
-- Pads 5-8 control two FX units when in Stem Mode
-- Pads 5, 7, 8: Delay + Freeze on FX Unit 3 (single mode)
-- Pad 6: Turntable FX brake on FX Unit 4 (group mode: Beatmasher + Gater + Turntable FX)
+- **Pads 5-8** control two FX units when in Stem Mode
+- **Pads 5, 7, 8**: Delay + Freeze on FX Unit 3 (single mode)
+- **Pad 6**: Turntable FX brake on FX Unit 4 (group mode: Beatmasher + Gater + Turntable FX)
 - Familiar workflow for Serato users
 
 ### Patch 03: Advanced Controls (Shift+Pads)
 
-- Shift + Pads 1-4: Toggle FX Send on/off per stem
-- Shift + Pads 5-8: Toggle Filter on/off per stem
+- **Shift + Pads 1-4**: Toggle FX Send on/off per stem
+- **Shift + Pads 5-8**: Toggle Filter on/off per stem
 - LED feedback shows current state
 
 ### Patch 04: Stem Capture Freeze
 
-- Capture button toggles a persistent Delay+Freeze lock on all four stems
+- **Capture button** toggles a persistent Delay+Freeze lock on all four stems
 - First press: freeze locked, button lights up
 - Second press: freeze released, button goes dark
 - Pressing any stem FX pad cancels the freeze instantly
 - **Configurable scope**: Works in stem mode by default; set `sfxCaptureFreezeOnlyInStemMode = false` to enable on all deck types
-- Requires Patch 02 (Serato-Style Stem FX)
+- **Requires** Patch 02 (Serato-Style Stem FX)
 
 ### Patch 05: Duplicate Deck
 
-- Edit button duplicates the focused deck to the sister deck (A↔C or B↔D)
+- **Edit button** duplicates the focused deck to the sister deck (A↔C or B↔D)
 - Automatically splits stems: source keeps vocals only, target gets instrumentals only
 - If source was playing, target auto-plays at the same position for instant in-sync layering
 - Edit button LED is bright while the opposing deck is playing, dim when idle
 - Second press (while opposing deck is playing): stops the opposing deck instead of duplicating
 - **Configurable scope**: Works in stem mode by default; set `duplicateDeckOnlyInStemMode = false` to enable on all deck types
-- Requires Patch 02 (Serato-Style Stem FX) — provides `sfxStem*Muted`, `stemMode`, and the outer WiresGroup
+- **Requires** Patch 02 (Serato-Style Stem FX)
 
 ### Patch 06: Stem Super Separation
 
@@ -60,7 +62,6 @@ Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_
 - All four knobs follow `sssRestoreMode` on shift release: `"snapshot"` (default), `"fader"`, or `"latch"`
 - **StemSuperSeparationMode**: Shift+Flux enters a persistent mode; FX knobs perform SSS without holding shift; FLUX LED pulsates; Shift+Flux exits and applies latch/restore; Shift + FX knobs temporarily disables StemSuperSeparationMode to be able to pre-position knobs
 - **Configurable scope**: Stem decks only by default; set `sssOnlyInStemMode = false` to enable on all deck types
-- See [D2_stem-super-separation.md](D2_stem-super-separation.md) for full details
 
 ---
 
@@ -79,51 +80,28 @@ traktor-mod
 
 ---
 
-## Key Files
-
-| File                                     | Purpose                                      |
-| ---------------------------------------- | -------------------------------------------- |
-| `qml/CSI/Common/Deck_S8Style.qml`        | Core modification (all patches applied here) |
-| `patches/01-stem-mute-pads.yaml`         | Feature 1: Stem mode support                 |
-| `patches/02-stem-fx-serato-style.yaml`   | Feature 2: FX Unit 3+4 routing               |
-| `patches/03-fx-send-filter-toggles.yaml` | Feature 3: Shift controls                    |
-| `config.yaml`                            | Hybrid mode guide & precedence               |
-| `DESIGN_PHILOSOPHY.md`                   | Why this approach                            |
-
----
-
 ## Configuration
 
-**FX Unit 3** — Single Mode, select: Echo
+Make sure to set the effects in the right order in your settings in Traktor: Preferences > Effects > Effect Units Configuration
+Or adapt the code as needed to adjust the index values inside `Deck_S8Style.qml` or swap intentionally to use other effects.
+
+**FX Unit 3** — Single Mode: Delay, ie. Delay should be in 6th position
+
+```
+  readonly property int sfxDelayEffectIndex:  6   // Delay (single mode on sfxDelayUnit, verify in Traktor)
+```
 
 **FX Unit 4** — Group Mode, three slots (in order):
 
-1. Beatmasher
-2. Gater
-3. Turntable FX
+1. Beatmasher (should be in 1st position)
+2. Gater (should be in 5th position)
+3. Turntable FX (should be in 18th position)
 
-**Set in Traktor**: Preferences > Effects > Effect Units Configuration
-
-To reassign effects to different FX units, change `sfxDelayUnit` and `sfxTurntableUnit` in `qml/CSI/Common/Deck_S8Style.qml`.
-
----
-
-## Features in Detail
-
-### When Stems Are Loaded
-
-- **Pads 1-4**: Toggle stem mute on/off (shows in mixer)
-- **Pads 5, 7, 8**: Delay + Freeze via FX Unit 3 (single mode)
-- **Pad 6**: Turntable FX brake via FX Unit 4 (group mode)
-- **Capture button**: Toggle persistent Delay+Freeze lock on all four stems
-- **Edit button**: Duplicate deck to sister deck with automatic vocal/instrumental split
-- **All decks**: Auto-detect stems and adapt accordingly
-
-### With Shift Key
-
-- **Shift + Pads 1-4**: Toggle FX Send on/off per stem
-- **Shift + Pads 5-8**: Toggle Filter on/off per stem
-- **LED feedback**: Shows on/off state
+```
+  readonly property int sfxBeatmasherIndex:  1   // Beatmasher (group mode slot 1)
+  readonly property int sfxGaterIndex:       5   // Gater (group mode slot 2)
+  readonly property int sfxTurntableFxIndex: 18  // Turntable FX (group mode slot 3)
+```
 
 ---
 
@@ -131,7 +109,7 @@ To reassign effects to different FX units, change `sfxDelayUnit` and `sfxTurntab
 
 This D2 setup is **young and modular**:
 
-- Five feature patches that layer cleanly
+- Several mostly independent feature patches that layer cleanly
 - Easy to understand each piece
 - Simple to add more features
 - Designed for evolution
@@ -148,7 +126,7 @@ All modifications are in **qml/CSI/Common/Deck_S8Style.qml** — a single file c
 
 - Confirm track has stems (gear icon in Traktor)
 - Verify D2 recognized (Preferences > Control Surfaces)
-- Check FX Unit 4 is configured
+- Check FX Units are configured
 - Restart Traktor
 
 **Shift+pads not working?**
@@ -183,7 +161,7 @@ git diff 34be413~1..34be413
 # etc...
 ```
 
-YAML files in `patches/` describe:
+YAML files each describe:
 
 - What was changed
 - Where in the file
@@ -191,48 +169,6 @@ YAML files in `patches/` describe:
 - Dependencies between patches
 
 ---
-
-## For Musicians (Non-Developers)
-
-You don't need to understand code to use this:
-
-1. **Copy the QML folder** to Traktor
-2. **Restart Traktor**
-3. **Load a track with stems**
-4. **Press the remix button** — pads switch to stem mode
-5. **Use pads 5-8** for effects, **pads 1-4** for mute
-
-Hold shift for advanced controls. That's it.
-
----
-
-## For Developers
-
-See `patches/` YAML files for:
-
-- Exact line numbers affected
-- Before/after code comparisons
-- Dependencies and requirements
-- How patches compose together
-
-The git history shows the evolution:
-
-- Commit 1: Stock Traktor 4.4.2 baseline
-- Commits 2-5: Features added incrementally
-- Current: All features combined
-
-Fork and extend as you like (MIT licensed).
-
----
-
-## Integration with Broader Ecosystem
-
-This D2 mod is an example of the **hybrid approach** documented in [traktor-kontrol-qml](https://github.com/lsmith77/traktor-kontrol-qml):
-
-- **Young, modular mods** (like D2): Extract patches, compose features
-- **Mature, integrated mods** (like X1): Keep as complete systems
-
-The D2 shows how small-to-medium mods can evolve iteratively. As it matures, core features stay together while new options become patches.
 
 ### Learning & Documentation
 
