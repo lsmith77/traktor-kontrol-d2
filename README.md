@@ -63,6 +63,13 @@ Adds professional Stem Mode support to the D2 by extending `qml/CSI/Common/Deck_
 - **StemSuperSeparationMode**: Shift+Flux enters a persistent mode; FX knobs perform SSS without holding shift; FLUX LED pulsates; Shift+Flux exits and applies latch/restore; Shift + FX knobs temporarily disables StemSuperSeparationMode to be able to pre-position knobs
 - **Configurable scope**: Stem decks only by default; set `sssOnlyInStemMode = false` to enable on all deck types
 
+### Patch 07: Preview Player
+
+While in browse mode (ie. Browse knob has been pushed):
+
+- **Shift + Browse knob push**: cycles `load_or_play` — loads and plays if nothing loaded, stops without unloading if playing, resumes if stopped
+- **Browse knob turn** (while preview is playing): seeks through the preview track instead of scrolling the browser list
+
 ---
 
 ## Installation
