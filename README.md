@@ -70,6 +70,13 @@ While in browse mode (ie. Browse knob has been pushed):
 - **Shift + Browse knob push**: cycles `load_or_play` — loads and plays if nothing loaded, stops without unloading if playing, resumes if stopped
 - **Browse knob turn** (while preview is playing): seeks through the preview track instead of scrolling the browser list
 
+### Patch 08: Browser Layout
+
+While in browse mode (ie. Browse knob has been pushed):
+
+- **Browse knob touch**: opens Traktor's browser layout on the laptop screen
+- **Browse knob release**: restores the laptop browser to the state it was in before the touch
+
 ---
 
 ## Installation
