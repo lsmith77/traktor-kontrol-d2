@@ -1156,6 +1156,9 @@ Module
   // config.stems[0..3]: stems to route. config.dryWet; config.knob1 (TIME), config.knob2 (FEEDBACK),
   // config.knob3 (DEPTH/DRY-WET within effect); config.button2 (Freeze).
   function sfxDelayStart(config) {
+    sfxFxUnitDelayType.value        = sfxFxTypeSingle
+    sfxFxUnitDelaySelect.value      = sfxDelayEffectIndex
+    sfxFxUnitDelayEnabled.value     = true
     sfxStem1FxSendOn.value          = config.stems[0] || false
     sfxStem2FxSendOn.value          = config.stems[1] || false
     sfxStem3FxSendOn.value          = config.stems[2] || false
